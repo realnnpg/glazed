@@ -56,7 +56,6 @@ public class GlazedAddon extends MeteorAddon {
         Modules.get().add(new AutoShulkerShellOrder());
         Modules.get().add(new EmergencySeller());
         Modules.get().add(new RTPEndBaseFinder());
-        Modules.get().add(new ShopBuyer());
         Modules.get().add(new OrderDropper());
         Modules.get().add(new CollectibleESP());
         Modules.get().add(new SpawnerNotifier());
