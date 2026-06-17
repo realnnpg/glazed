@@ -7,7 +7,7 @@
   <a href="https://github.com/realnnpg/Glazed/releases"><img src="https://img.shields.io/github/downloads/realnnpg/Glazed/total.svg?style=for-the-badge&label=Downloads" alt="Downloads"/></a>
   <img src="https://img.shields.io/github/stars/realnnpg/Glazed?style=for-the-badge" alt="Stars"/>
   <img src="https://img.shields.io/github/repo-size/realnnpg/Glazed?style=for-the-badge" alt="Repo Size"/>
-  <a href="https://discord.gg/glazedclient"><img src="https://img.shields.io/discord/1282076342908747879?color=%237289DA&label=Discord&logo=discord&logoColor=white&style=for-the-badge" alt="Discord"/></a>
+  <a href="https://discord.gg/glazed"><img src="https://img.shields.io/discord/1282076342908747879?color=%237289DA&label=Discord&logo=discord&logoColor=white&style=for-the-badge" alt="Discord"/></a>
 </p>
 
 ---
@@ -159,7 +159,7 @@ Pair your Glazed setup with these built-in Meteor modules for max efficiency:
 <details>
   <summary><strong>🛠️How do I get updates?</strong></summary>
   <p>
-    Join the <a href="https://discord.gg/glazedclient">Discord server</a> for update announcements, changelogs, and early access to new modules. You can also star/watch the GitHub repo.
+    Join the <a href="https://discord.gg/glazed">Discord server</a> for update announcements, changelogs, and early access to new modules. You can also star/watch the GitHub repo.
   </p>
 </details>
 
@@ -167,7 +167,7 @@ Pair your Glazed setup with these built-in Meteor modules for max efficiency:
 
 ## 📢Join the Discord
 
-> 💬**[Join the Discord](https://discord.gg/glazedclient)** for:
+> 💬**[Join the Discord](https://discord.gg/glazed)** for:
 > - 💸Giveaways
 > - 📢Announcements
 > - 🔍Support
