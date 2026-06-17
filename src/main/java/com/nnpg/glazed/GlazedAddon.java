@@ -73,10 +73,6 @@ public class GlazedAddon extends MeteorAddon {
         Modules.get().add(new BlockNotifier());
         Modules.get().add(new SpawnerOrder());
         Modules.get().add(new RegionMap());
-<<<<<<< HEAD
-=======
-        Modules.get().add(new AutoShulkerShellOrder());
->>>>>>> pr-35
         Modules.get().add(new NoBlockInteract());
         Modules.get().add(new BeehiveESP());
         Modules.get().add(new WindPearlMacro());
