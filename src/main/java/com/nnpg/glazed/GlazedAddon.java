@@ -19,6 +19,7 @@ import net.minecraft.item.ItemStack;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+
 public class GlazedAddon extends MeteorAddon {
     private static final Logger LOGGER = LoggerFactory.getLogger("Glazed");
 
@@ -57,7 +58,7 @@ public class GlazedAddon extends MeteorAddon {
         Modules.get().add(new TpaMacro());
         Modules.get().add(new TabDetector());
         Modules.get().add(new OrderSniper());
-        Modules.get().add(new LamaESP());
+        Modules.get().add(new LlamaESP());
         Modules.get().add(new PillagerESP());
         Modules.get().add(new HoleTunnelStairsESP());
         Modules.get().add(new CoveredHole());
@@ -72,6 +73,10 @@ public class GlazedAddon extends MeteorAddon {
         Modules.get().add(new BlockNotifier());
         Modules.get().add(new SpawnerOrder());
         Modules.get().add(new RegionMap());
+<<<<<<< HEAD
+=======
+        Modules.get().add(new AutoShulkerShellOrder());
+>>>>>>> pr-35
         Modules.get().add(new NoBlockInteract());
         Modules.get().add(new BeehiveESP());
         Modules.get().add(new WindPearlMacro());
