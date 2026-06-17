@@ -15,7 +15,7 @@ public class MeteorMixinCanceller implements MixinCanceller {
 
     static {
         if (METEOR_PRESENT) {
-            //LOGGER.info("[Glazed] Meteor autoban on donut is active");
+            LOGGER.info("[Glazed Protection] Meteor Client detected - Meteor's key resolution protection will be disabled to avoid detection.");
         }
     }
 

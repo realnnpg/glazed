@@ -73,10 +73,6 @@ public class UIHelper extends Module {
             .build()
     );
 
-    // Won't add for creating orders at the moment or for cancelling orders
-    // as creating orders requires more interaction and cancelling
-    // orders is not frequent enough to warrant an auto-confirm
-
     // Progression: /tpa {player_name} -> "CONFIRM REQUEST"
     private final Setting<Boolean> acTPA = sgAutoConfirm.add(new BoolSetting.Builder()
             .name("tpa")
@@ -128,11 +124,6 @@ public class UIHelper extends Module {
             .build()
     );
 
-
-    // Progression: "SHOP" -> "SHOP - {END/NETHER/GEAR/FOOD}" -> "BUYING {ITEM}"
-    // Not including shop at the moment due to normally having to set quantities
-
-
     // Progression: "CHOOSE 1 ITEM" -> "CONFIRM"
     private final Setting<Boolean> acCrateBuy = sgAutoConfirm.add(new BoolSetting.Builder()
             .name("crate-buy")
@@ -151,7 +142,7 @@ public class UIHelper extends Module {
             .build()
     );
 
-    // Progression: "{amount} {PIG/COW/ZOMBIE/SPIDER/SKELETON/CREEPER/ZOMBIFIED PIGLIN/BLAZE/IRON GOLEM} SPAWNERS" -> "CONFIRM SELL"
+    // Progression: "{amount} {PIG/COW/...} SPAWNERS" -> "CONFIRM SELL"
     private final Setting<Boolean> acSpawnerSellAll = sgAutoConfirm.add(new BoolSetting.Builder()
             .name("spawner-sell-all")
             .description("Automatically confirms selling all items in spawners.")
@@ -170,6 +161,10 @@ public class UIHelper extends Module {
             .build()
     );
 
+    // ─────────────────────────────────────────────
+    //  AutoConfirm State
+    // ─────────────────────────────────────────────
+
     private final CircularBuffer<String> lastScreens = new CircularBuffer<>(5);
     private String currentScreen = null;
 
@@ -177,126 +172,280 @@ public class UIHelper extends Module {
     private long commandTime = 0;
     private static final long COMMAND_TIMEOUT = 10000;
 
+    /**
+     * The screen title we are actively trying to confirm.
+     * Non-null means a confirm attempt is in progress.
+     */
+    private String pendingConfirmScreen = null;
+
+    /**
+     * How many times we have retried pressing the confirm button for the
+     * current pendingConfirmScreen without success.
+     */
+    private int confirmRetryCount = 0;
+
+    /**
+     * Maximum number of retries before giving up.
+     * 12 retries × 75 ms = ~900 ms total window — enough for slow servers.
+     */
+    private static final int MAX_RETRIES = 12;
+
+    /**
+     * Delay between retry attempts in milliseconds.
+     * Short enough to feel instant, long enough for the server to send slot data.
+     */
+    private static final long RETRY_INTERVAL_MS = 75;
+
+    /** Scheduled time (epoch ms) at which the next confirm attempt fires. */
     private long acTimer = 0;
+
+    /** When we last successfully sent a click, to prevent double-firing. */
     private long lastClickTime = 0;
     private static final long CLICK_COOLDOWN = 1000;
 
 
+    // ─────────────────────────────────────────────
+    //  Screen Tracking
+    // ─────────────────────────────────────────────
+
     @EventHandler
     private void onOpenScreen(OpenScreenEvent event) {
         if (event.screen == null) {
-            // Reset timer if screen closes unexpectedly
-            if (acTimer > 0) {
-                acTimer = 0;
+            // Screen closed. We intentionally do NOT cancel pendingConfirmScreen here,
+            // because the server sometimes briefly closes then reopens the GUI
+            // (e.g. rapid order-fulfill flow). The retry logic in tryPressConfirmButton
+            // will handle it: if the screen stays gone it exhausts MAX_RETRIES and gives up.
+            currentScreen = null;
+            return;
+        }
+
+        if (!(event.screen instanceof HandledScreen<?>)) {
+            return;
+        }
+
+        String newScreen = StringUtils.convertUnicodeToAscii(
+                ((HandledScreen<?>) event.screen).getTitle().getString()
+        ).toUpperCase();
+
+        // Push previous screen into history only when it actually changed
+        if (currentScreen != null && !currentScreen.equals(newScreen)) {
+            lastScreens.add(currentScreen);
+        }
+        currentScreen = newScreen;
+
+        if (!enableAutoConfirm.get()) return;
+
+        // Respect click cooldown before scheduling a new confirm
+        if (System.currentTimeMillis() - lastClickTime < CLICK_COOLDOWN) return;
+
+        if (shouldConfirm(newScreen)) {
+            // Start a fresh confirm attempt for this screen
+            pendingConfirmScreen = newScreen;
+            confirmRetryCount = 0;
+            acTimer = System.currentTimeMillis() + acRandomDelay.get().getRandom();
+        }
+    }
+
+
+    // ─────────────────────────────────────────────
+    //  Command Tracking (for context-sensitive confirms)
+    // ─────────────────────────────────────────────
+
+    @EventHandler
+    private void onSendPacket(PacketEvent.Send event) {
+        if (!isActive()) return;
+
+        // AutoConfirm: track relevant commands for context checks
+        String command = null;
+        if (event.packet instanceof ChatMessageC2SPacket packet) {
+            String msg = packet.chatMessage().trim();
+            if (msg.startsWith("/")) command = msg;
+        } else if (event.packet instanceof CommandExecutionC2SPacket packet) {
+            command = "/" + packet.command().trim();
+        }
+
+        if (command != null && isTrackedCommand(command)) {
+            currentCommand = command;
+            commandTime = System.currentTimeMillis();
+        }
+
+        // AutoAdvance: track "drop loot" clicks
+        if (enableAutoAdvance.get()) {
+            if (event.packet instanceof ClickSlotC2SPacket packet) {
+                if (StringUtils.convertUnicodeToAscii(
+                        packet.getStack().getName().getString()).equals("drop loot")) {
+                    aaTimer = System.currentTimeMillis() + aaRandomDelay.get().getRandom();
+                }
+            }
+        }
+    }
+
+    private boolean isTrackedCommand(String cmd) {
+        return cmd.startsWith("/ah sell")     ||
+               cmd.startsWith("/tpa ")        ||
+               cmd.startsWith("/tpahere ")    ||
+               cmd.startsWith("/tpaccept ")   ||
+               cmd.startsWith("/bounty add ");
+    }
+
+
+    // ─────────────────────────────────────────────
+    //  Tick: fire timers
+    // ─────────────────────────────────────────────
+
+    @EventHandler
+    private void onTick(TickEvent.Pre event) {
+        if (acTimer > 0 && System.currentTimeMillis() >= acTimer) {
+            acTimer = 0;
+            if (pendingConfirmScreen != null) {
+                tryPressConfirmButton();
+            }
+        }
+
+        if (aaTimer > 0 && System.currentTimeMillis() >= aaTimer) {
+            aaTimer = 0;
+            advancePage(aaDirection.get());
+        }
+    }
+
+
+    // ─────────────────────────────────────────────
+    //  Core confirm logic — robust with retries
+    // ─────────────────────────────────────────────
+
+    /**
+     * Attempts to click the confirm/accept button in the currently open screen.
+     *
+     * If the screen is not yet open, or if the inventory slots are not yet
+     * populated by the server, the attempt is retried up to MAX_RETRIES times
+     * with a short RETRY_INTERVAL_MS delay between each try. This covers the
+     * two main race conditions:
+     *
+     *  (a) Screen opened but server hasn't sent slot data yet → button missing.
+     *  (b) Rapid open/close cycle → mc.currentScreen is momentarily null.
+     *
+     * Only gives up if:
+     *  – MAX_RETRIES is exhausted, or
+     *  – a completely unrelated (non-confirm) screen is now open.
+     */
+    private void tryPressConfirmButton() {
+        if (mc.player == null || mc.interactionManager == null) {
+            cancelPending();
+            return;
+        }
+
+        // ── Case: screen not open yet (transient null after rapid open/close) ──
+        if (mc.currentScreen == null) {
+            scheduleRetry();
+            return;
+        }
+
+        // ── Case: open screen is not a handled/inventory screen ──
+        if (!(mc.currentScreen instanceof HandledScreen<?>)) {
+            cancelPending();
+            return;
+        }
+
+        HandledScreen<?> screen = (HandledScreen<?>) mc.currentScreen;
+        String actualTitle = StringUtils.convertUnicodeToAscii(
+                screen.getTitle().getString()
+        ).toUpperCase();
+
+        // ── Case: a different screen opened (not the one we planned to confirm) ──
+        if (!actualTitle.equals(pendingConfirmScreen)) {
+            if (shouldConfirm(actualTitle)) {
+                // A new valid confirm screen appeared — update and retry from fresh
+                pendingConfirmScreen = actualTitle;
+                confirmRetryCount = 0;
+                scheduleRetry();
+            } else {
+                // User navigated somewhere else entirely — abandon
+                cancelPending();
             }
             return;
         }
 
-        if (event.screen instanceof HandledScreen<?>) {
-            String newScreen = StringUtils.convertUnicodeToAscii(((HandledScreen<?>) event.screen).getTitle().getString()).toUpperCase();
+        // ── Correct screen is open — search for the button ──
+        ScreenHandler handler = screen.getScreenHandler();
 
-            // Only update screen tracking if it's actually a new screen
-            if (currentScreen != null && !currentScreen.equals(newScreen)) {
-                lastScreens.add(currentScreen);
-            }
-            currentScreen = newScreen;
-        }
-
-        if (shouldConfirm(currentScreen)) {
-            // Check cooldown to prevent rapid clicking
-            long currentTime = System.currentTimeMillis();
-            if (currentTime - lastClickTime < CLICK_COOLDOWN) {
+        for (int i = 0; i < handler.slots.size(); i++) {
+            ItemStack stack = handler.getSlot(i).getStack();
+            if (isConfirmButton(stack)) {
+                // Click twice (vanilla double-click protection workaround)
+                mc.interactionManager.clickSlot(handler.syncId, i, 0, SlotActionType.PICKUP, mc.player);
+                mc.interactionManager.clickSlot(handler.syncId, i, 0, SlotActionType.PICKUP, mc.player);
+                lastClickTime = System.currentTimeMillis();
+                cancelPending(); // success — clear state
                 return;
             }
-            acTimer = currentTime + acRandomDelay.get().getRandom();
+        }
+
+        // ── Button not found: slots likely not populated by server yet ──
+        scheduleRetry();
+    }
+
+    /** Arms the next retry if we still have budget, otherwise gives up. */
+    private void scheduleRetry() {
+        if (confirmRetryCount < MAX_RETRIES) {
+            confirmRetryCount++;
+            acTimer = System.currentTimeMillis() + RETRY_INTERVAL_MS;
+        } else {
+            cancelPending();
         }
     }
 
-    @EventHandler
-    private void onSendPacket(PacketEvent.Send event) {
-        if (event.packet instanceof ChatMessageC2SPacket packet) {
-            String message = packet.chatMessage().trim();
-            if (message.startsWith("/")) {
-                if (message.startsWith("/ah sell") || message.startsWith("/tpa ") ||
-                        message.startsWith("/tpahere ") || message.startsWith("/tpaccept ") ||
-                        message.startsWith("/bounty add ")) {
-                    currentCommand = message;
-                    commandTime = System.currentTimeMillis();
-                }
-            }
-        } else if (event.packet instanceof CommandExecutionC2SPacket packet) {
-            String command = "/" + packet.command().trim();
-            // Check if it's a relevant command
-            if (command.startsWith("/ah sell") || command.startsWith("/tpa ") ||
-                    command.startsWith("/tpahere ") || command.startsWith("/tpaccept ") ||
-                    command.startsWith("/bounty add ")) {
-                currentCommand = command;
-                commandTime = System.currentTimeMillis();
-            }
-        }
+    /** Clears all pending confirm state. */
+    private void cancelPending() {
+        pendingConfirmScreen = null;
+        confirmRetryCount = 0;
+        acTimer = 0;
     }
 
-    private boolean shouldConfirm(String currentScreenTitle) {
-        if (currentScreenTitle == null) {
-            return false;
-        }
-        if (!(currentScreenTitle.contains("CONFIRM") || currentScreenTitle.contains("ACCEPT"))) {
-            return false;
-        }
+
+    // ─────────────────────────────────────────────
+    //  shouldConfirm
+    // ─────────────────────────────────────────────
+
+    private boolean shouldConfirm(String screenTitle) {
+        if (screenTitle == null) return false;
+        if (!(screenTitle.contains("CONFIRM") || screenTitle.contains("ACCEPT"))) return false;
 
         boolean shouldConfirm = false;
 
-        switch (currentScreenTitle) {
+        switch (screenTitle) {
             case "CONFIRM PURCHASE" -> {
                 boolean foundAuction = false;
                 boolean foundShardShop = false;
-
                 for (int i = 0; i < Math.min(lastScreens.size, 3); i++) {
                     try {
-                        String recentScreen = lastScreens.get(i);
-                        if (recentScreen != null) {
-                            if (recentScreen.contains("AUCTION")) {
-                                foundAuction = true;
-                            }
-                            if (recentScreen.contains("SHOP - SHARD SHOP")) {
-                                foundShardShop = true;
-                            }
+                        String recent = lastScreens.get(i);
+                        if (recent != null) {
+                            if (recent.contains("AUCTION"))       foundAuction = true;
+                            if (recent.contains("SHOP - SHARD SHOP")) foundShardShop = true;
                         }
-                    } catch (Exception e) {
-                        // Ignore screen check errors
-                    }
+                    } catch (Exception ignored) {}
                 }
-
-                if (acAHBuy.get() && foundAuction) {
-                    shouldConfirm = true;
-                } else if (acShardshopBuy.get() && foundShardShop) {
-                    shouldConfirm = true;
-                }
+                if (acAHBuy.get() && foundAuction)          shouldConfirm = true;
+                else if (acShardshopBuy.get() && foundShardShop) shouldConfirm = true;
             }
             case "CONFIRM LISTING" -> {
-                if (acAHSell.get()) {
-                    shouldConfirm = true;
-                }
+                if (acAHSell.get()) shouldConfirm = true;
             }
             case "ORDERS -> CONFIRM DELIVERY" -> {
-                // Check previous screen for Orders
-                String prevScreen = lastScreens.get(0);
-                if (acOrderFulfill.get() && prevScreen != null && prevScreen.contains("ORDERS")) {
-                    shouldConfirm = true;
-                }
-            }
-            case "CONFIRM REQUEST" -> {
-                // Check current command for /tpa or /tpahere
-                if (currentCommand != null && System.currentTimeMillis() - commandTime < COMMAND_TIMEOUT) {
-                    if (acTPA.get() && currentCommand.startsWith("/tpa ")) {
-                        shouldConfirm = true;
-                    } else if (acTPAHere.get() && currentCommand.startsWith("/tpahere ")) {
+                try {
+                    String prevScreen = lastScreens.get(0);
+                    if (acOrderFulfill.get() && prevScreen != null && prevScreen.contains("ORDERS")) {
                         shouldConfirm = true;
                     }
+                } catch (Exception ignored) {}
+            }
+            case "CONFIRM REQUEST" -> {
+                if (currentCommand != null && System.currentTimeMillis() - commandTime < COMMAND_TIMEOUT) {
+                    if (acTPA.get()     && currentCommand.startsWith("/tpa "))     shouldConfirm = true;
+                    else if (acTPAHere.get() && currentCommand.startsWith("/tpahere ")) shouldConfirm = true;
                 }
             }
             case "ACCEPT REQUEST" -> {
-                // Check current command for /tpaccept
                 if (acTPAReceive.get() && currentCommand != null &&
                         System.currentTimeMillis() - commandTime < COMMAND_TIMEOUT &&
                         currentCommand.startsWith("/tpaccept ")) {
@@ -304,7 +453,6 @@ public class UIHelper extends Module {
                 }
             }
             case "ACCEPT TPAHERE REQUEST" -> {
-                // Check current command for /tpaccept
                 if (acTPAHereReceive.get() && currentCommand != null &&
                         System.currentTimeMillis() - commandTime < COMMAND_TIMEOUT &&
                         currentCommand.startsWith("/tpaccept ")) {
@@ -312,23 +460,19 @@ public class UIHelper extends Module {
                 }
             }
             case "CONFIRM" -> {
-                // Check recent screens for CHOOSE 1 ITEM
                 if (acCrateBuy.get()) {
                     for (int i = 0; i < Math.min(lastScreens.size, 3); i++) {
                         try {
-                            String recentScreen = lastScreens.get(i);
-                            if (recentScreen != null && recentScreen.contains("CHOOSE 1 ITEM")) {
+                            String recent = lastScreens.get(i);
+                            if (recent != null && recent.contains("CHOOSE 1 ITEM")) {
                                 shouldConfirm = true;
                                 break;
                             }
-                        } catch (Exception e) {
-                            // Ignore screen access errors
-                        }
+                        } catch (Exception ignored) {}
                     }
                 }
             }
             case "CONFIRM BOUNTY" -> {
-                // Check current command for /bounty add
                 if (acBounty.get() && currentCommand != null &&
                         System.currentTimeMillis() - commandTime < COMMAND_TIMEOUT &&
                         currentCommand.startsWith("/bounty add ")) {
@@ -336,70 +480,31 @@ public class UIHelper extends Module {
                 }
             }
             case "CONFIRM SELL" -> {
-                // Check previous screen for spawner sell all
                 try {
                     String prevScreen = lastScreens.get(0);
-                    if (acSpawnerSellAll.get() && prevScreen != null && (prevScreen.contains("SPAWNER"))) {
+                    if (acSpawnerSellAll.get() && prevScreen != null && prevScreen.contains("SPAWNER")) {
                         shouldConfirm = true;
                     }
-                } catch (Exception e) {
-                    // Ignore if no previous screen
-                }
+                } catch (Exception ignored) {}
             }
         }
+
         return shouldConfirm;
-    }
-
-
-    private void pressConfirmButton() {
-        if (mc.player == null || mc.interactionManager == null) {
-            return;
-        }
-
-        if (mc.currentScreen == null) {
-            // Don't retry if recently clicked
-            if (System.currentTimeMillis() - lastClickTime < CLICK_COOLDOWN) {
-                acTimer = 0;
-                return;
-            }
-            acTimer = System.currentTimeMillis() + 10; // Retry
-            return;
-        }
-
-        if (!(mc.currentScreen instanceof HandledScreen<?>)) {
-            return;
-        }
-
-        HandledScreen<?> screen = (HandledScreen<?>) mc.currentScreen;
-        ScreenHandler handler = screen.getScreenHandler();
-
-        // Find the confirm button (green/lime stained glass pane with "confirm" or "accept" in the name)
-        for (int i = 0; i < handler.slots.size(); i++) {
-            ItemStack stack = handler.getSlot(i).getStack();
-            if (isConfirmButton(stack)) {
-                // Double Click
-                mc.interactionManager.clickSlot(handler.syncId, i, 0, SlotActionType.PICKUP, mc.player);
-                mc.interactionManager.clickSlot(handler.syncId, i, 0, SlotActionType.PICKUP, mc.player);
-                lastClickTime = System.currentTimeMillis();
-                acTimer = 0; // Clear timer to prevent immediate retry
-                return;
-            }
-        }
     }
 
     private boolean isConfirmButton(ItemStack stack) {
         if (stack.isEmpty()) return false;
-
-        // Check if it's a green/lime stained glass pane
         boolean isGreenGlass = stack.getItem() == Items.LIME_STAINED_GLASS_PANE ||
-                stack.getItem() == Items.GREEN_STAINED_GLASS_PANE;
-
-        // Check if the name contains confirm or accept
+                               stack.getItem() == Items.GREEN_STAINED_GLASS_PANE;
         String name = StringUtils.convertUnicodeToAscii(stack.getName().getString()).toLowerCase();
         boolean hasConfirmText = name.contains("confirm") || name.contains("accept");
-
         return isGreenGlass && hasConfirmText;
     }
+
+
+    // ─────────────────────────────────────────────
+    //  AutoAdvance
+    // ─────────────────────────────────────────────
 
     private final SettingGroup sgAutoAdvance = settings.createGroup("AutoAdvance");
 
@@ -438,20 +543,16 @@ public class UIHelper extends Module {
     private long aaTimer = 0;
 
     private void advancePage(Direction dir) {
-        if (mc.player == null || mc.interactionManager == null || mc.currentScreen == null) {
-            return;
-        }
-        if (!(mc.currentScreen instanceof HandledScreen<?> screen)) {
-            return;
-        }
+        if (mc.player == null || mc.interactionManager == null || mc.currentScreen == null) return;
+        if (!(mc.currentScreen instanceof HandledScreen<?> screen)) return;
 
         ScreenHandler handler = screen.getScreenHandler();
 
         for (int i = 0; i < handler.slots.size(); i++) {
-            String name = StringUtils.convertUnicodeToAscii(handler.getSlot(i).getStack().getName().getString());
-            if ((dir == Direction.FORWARDS && name.equals("next")) ||
-                    (dir == Direction.BACKWARDS && name.equals("back"))) {
-                // Double click
+            String name = StringUtils.convertUnicodeToAscii(
+                    handler.getSlot(i).getStack().getName().getString());
+            if ((dir == Direction.FORWARDS  && name.equals("next")) ||
+                (dir == Direction.BACKWARDS && name.equals("back"))) {
                 mc.interactionManager.clickSlot(handler.syncId, i, 0, SlotActionType.PICKUP, mc.player);
                 mc.interactionManager.clickSlot(handler.syncId, i, 0, SlotActionType.PICKUP, mc.player);
                 return;
@@ -464,36 +565,10 @@ public class UIHelper extends Module {
         BACKWARDS
     }
 
-    @EventHandler
-    private void onPacketSend(PacketEvent.Send event) {
-        if (!isActive()) return;
 
-        // AutoAdvance functionality
-        if (enableAutoAdvance.get()) {
-            // Check if the packet is a slot click packet (when player clicks items in GUI)
-            if (event.packet instanceof ClickSlotC2SPacket packet) {
-                // Detect if the slot clicked contained a dropper
-                if (StringUtils.convertUnicodeToAscii(packet.getStack().getName().getString()).equals("drop loot")) {
-                    // Start timer after dropping loot (delay is already in milliseconds)
-                    aaTimer = System.currentTimeMillis() + aaRandomDelay.get().getRandom();
-                }
-            }
-        }
-    }
-
-    @EventHandler
-    private void onTick(TickEvent.Pre event) {
-        if (acTimer > 0 && System.currentTimeMillis() >= acTimer) {
-            acTimer = 0;
-            if (currentScreen != null && shouldConfirm(currentScreen)) {
-                pressConfirmButton();
-            }
-        }
-        if (aaTimer > 0 && System.currentTimeMillis() >= aaTimer) {
-            aaTimer = 0;
-            advancePage(aaDirection.get());
-        }
-    }
+    // ─────────────────────────────────────────────
+    //  Utilities
+    // ─────────────────────────────────────────────
 
     private static class CircularBuffer<T> {
         private final Object[] buffer;

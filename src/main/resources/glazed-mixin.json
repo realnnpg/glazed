@@ -1,0 +1,22 @@
+{
+  "required": true,
+  "minVersion": "0.8",
+  "package": "com.nnpg.glazed.mixin",
+  "compatibilityLevel": "JAVA_21",
+  "mixins": [],
+  "client": [
+    "protection.TranslatableTextContentMixin",
+    "protection.KeybindTextContentMixin",
+    "protection.TranslationStorageAccessor",
+    "protection.DecoderHandlerMixin",
+    "protection.ClientConnectionMixin",
+    "protection.PacketUtilsMixin",
+    "protection.SessionProtectionMixin",
+    "protection.TranslationStorageMixin",
+    "protection.ServerResourcePackLoaderMixin"
+  ],
+  "server": [],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}

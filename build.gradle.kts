@@ -44,6 +44,9 @@ repositories {
         implementation("com.google.code.gson:gson:2.10.1")
 
         include(implementation(annotationProcessor("com.github.bawnorton.mixinsquared:mixinsquared-fabric:0.3.7-beta.1")!!)!!)
+        
+        // MixinExtras for @WrapOperation
+        include(implementation(annotationProcessor("io.github.llamalad7:mixinextras-fabric:0.4.1")!!)!!)
 
 
 

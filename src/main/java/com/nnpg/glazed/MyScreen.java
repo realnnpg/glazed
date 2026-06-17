@@ -1,5 +1,6 @@
 package com.nnpg.glazed;
 
+import com.nnpg.glazed.GlazedAddon;
 import meteordevelopment.meteorclient.gui.GuiTheme;
 import meteordevelopment.meteorclient.gui.WindowScreen;
 import meteordevelopment.meteorclient.gui.widgets.containers.WHorizontalList;
