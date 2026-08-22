@@ -74,7 +74,7 @@ public class RegionMap extends Module {
 
     private final Setting<Boolean> advancedMap = displaySettings.add(new BoolSetting.Builder()
             .name("advanced-region-map")
-            .description("Use the new glitched/media category map instead of the old continent-colored map.")
+            .description("Use the new baltop/media region map")
             .defaultValue(false)
             .build());
 
