@@ -56,7 +56,7 @@ public class RegionMap extends Module {
 
     private final Setting<Boolean> enableRegionLabels = displaySettings.add(new BoolSetting.Builder()
             .name("enable-region-labels")
-            .description("Show the category legend below the map.")
+            .description("Show the region labels below the map.")
             .defaultValue(true)
             .build());
 
@@ -153,7 +153,6 @@ public class RegionMap extends Module {
             }
 
             if (legacyMode) {
-                // Exact original behavior: fixed offsets, plain white text, no outlines.
                 if (enableCoordinates.get()) {
                     renderPlayerInfoLegacy(ctx, playerPos);
                 }
@@ -162,7 +161,6 @@ public class RegionMap extends Module {
                     renderRegionLegendLegacy(ctx);
                 }
             } else {
-                // New behavior: dynamically stacked, outlined, category-colored.
                 int legendBaseY = ctx.mapY + ctx.getMapHeight() + 8;
 
                 if (enableCoordinates.get()) {
@@ -182,7 +180,6 @@ public class RegionMap extends Module {
         return mc != null && mc.player != null && mc.level != null;
     }
 
-    /** Original behavior, copied as-is: fixed offset, plain white text, no outlines. */
     private void renderPlayerInfoLegacy(MapRenderContext ctx, Vec3 pos) {
         if (pos == null || ctx == null) return;
 
@@ -210,7 +207,6 @@ public class RegionMap extends Module {
         }
     }
 
-    /** Original behavior, copied as-is: fixed offset, 6-continent legend, plain white text, no outlines. */
     private void renderRegionLegendLegacy(MapRenderContext ctx) {
         if (ctx == null) return;
 
@@ -244,7 +240,6 @@ public class RegionMap extends Module {
         }
     }
 
-    /** New behavior: outlined, category-colored, dynamically stacked. Returns the next free Y position beneath it. */
     private int renderPlayerInfoAdvanced(MapRenderContext ctx, Vec3 pos, int startY) {
         if (pos == null || ctx == null) return startY;
 
@@ -273,7 +268,6 @@ public class RegionMap extends Module {
         }
     }
 
-    /** New behavior: fixed 3-entry category legend, dynamically stacked. Returns the next free Y position beneath it. */
     private int renderRegionLegendAdvanced(MapRenderContext ctx, int startY) {
         if (ctx == null) return startY;
 
@@ -304,7 +298,6 @@ public class RegionMap extends Module {
         }
     }
 
-    /** The 3 marked categories a region can fall into, plus NONE for unmarked regions. */
     private enum RegionCategory {
         NONE("", null),
         GLITCHED("Glitched (no rtp spots)", new Color(190, 60, 220, 255)),
@@ -319,26 +312,21 @@ public class RegionMap extends Module {
             this.color = color;
         }
 
-        /** Categories shown in the legend, in display order (NONE is never shown). */
         static RegionCategory[] legendCategories() {
             return new RegionCategory[]{GLITCHED, MEDIA_BALTOP, MEDIA_OTHER};
         }
     }
 
     private static class MapDataManager {
-        // Grid is 9 rows x 9 columns. Row 0 was cropped out of the reference screenshot,
-        // but its region IDs/continents are preserved here from the original data.
         private static final int GRID_ROWS = 9;
         private static final int GRID_COLS = 9;
         private static final double REGION_SIZE = 50000.0;
         private static final double MAP_OFFSET = 225000.0;
 
-        // Continent names, indexed by the continentType value used in REGION_LAYOUT below.
         private static final String[] CONTINENT_NAMES = {
                 "EU Central", "EU West", "NA East", "NA West", "Asia", "Oceania"
         };
 
-        // Original continent colors, used only when legacy-map mode is enabled.
         private static final Color[] CONTINENT_COLORS = {
                 new Color(159, 206, 99, 255),
                 new Color(0, 166, 99, 255),
@@ -356,9 +344,6 @@ public class RegionMap extends Module {
         }
 
         private void initializeRegionData() {
-            // {regionId, continentType} pairs, row by row, left to right, top to bottom.
-            // Category (glitched / media-baltop / media-other) is looked up separately
-            // via CATEGORY_OVERRIDES below since it's independent of continent.
             int[][] regionLayout = {
                     {82, 5}, {100, 3}, {101, 3}, {102, 3}, {103, 2}, {104, 2}, {105, 2}, {106, 2}, {91, 2},
                     {83, 5}, {44, 3}, {75, 3}, {42, 3}, {41, 2}, {40, 2}, {39, 2}, {38, 2}, {92, 2},
@@ -383,7 +368,6 @@ public class RegionMap extends Module {
             }
         }
 
-        // Manually confirmed classifications. Add region IDs here as you verify more in-game.
         private static final Map<Integer, RegionCategory> CATEGORY_OVERRIDES = new HashMap<>();
         static {
             CATEGORY_OVERRIDES.put(89, RegionCategory.GLITCHED);
@@ -578,10 +562,8 @@ public class RegionMap extends Module {
                         Color cellColor = null;
 
                         if (legacyMode) {
-                            // Legacy mode: every cell is colored by its continent.
                             cellColor = dataManager.getContinentColor(regionInfo.continentType);
                         } else if (regionInfo.category != RegionCategory.NONE) {
-                            // New mode: only marked cells (glitched/media) get a fill.
                             cellColor = regionInfo.category.color;
                         }
 
