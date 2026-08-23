@@ -56,7 +56,7 @@ public class RegionMap extends Module {
 
     private final Setting<Boolean> enableRegionLabels = displaySettings.add(new BoolSetting.Builder()
             .name("enable-region-labels")
-            .description("Show region type labels with colors.")
+            .description("Show the region labels below the map.")
             .defaultValue(true)
             .build());
 
@@ -70,6 +70,12 @@ public class RegionMap extends Module {
             .name("enable-player-indicator")
             .description("Show player position and direction on map.")
             .defaultValue(true)
+            .build());
+
+    private final Setting<Boolean> advancedMap = displaySettings.add(new BoolSetting.Builder()
+            .name("advanced-region-map")
+            .description("Use the new baltop/media region map")
+            .defaultValue(false)
             .build());
 
     private final Setting<Double> mapTransparency = visualSettings.add(new DoubleSetting.Builder()
@@ -131,7 +137,9 @@ public class RegionMap extends Module {
             );
 
             regionRenderer.renderMapBackground(ctx);
-            regionRenderer.renderRegionCells(ctx, mapData);
+
+            boolean legacyMode = !advancedMap.get();
+            regionRenderer.renderRegionCells(ctx, mapData, legacyMode);
 
             if (enableMapGrid.get()) {
                 regionRenderer.renderGridLines(ctx, gridLineColor.get());
@@ -144,12 +152,24 @@ public class RegionMap extends Module {
                         mc.player.getYRot(), playerIndicatorColor.get());
             }
 
-            if (enableCoordinates.get()) {
-                renderPlayerInfo(ctx, playerPos);
-            }
+            if (legacyMode) {
+                if (enableCoordinates.get()) {
+                    renderPlayerInfoLegacy(ctx, playerPos);
+                }
 
-            if (enableRegionLabels.get()) {
-                renderRegionLegend(ctx);
+                if (enableRegionLabels.get()) {
+                    renderRegionLegendLegacy(ctx);
+                }
+            } else {
+                int legendBaseY = ctx.mapY + ctx.getMapHeight() + 8;
+
+                if (enableCoordinates.get()) {
+                    legendBaseY = renderPlayerInfoAdvanced(ctx, playerPos, legendBaseY);
+                }
+
+                if (enableRegionLabels.get()) {
+                    renderRegionLegendAdvanced(ctx, legendBaseY);
+                }
             }
         } catch (Exception e) {
             LOG.error("Unhandled error in " + getClass().getSimpleName(), e);
@@ -160,7 +180,7 @@ public class RegionMap extends Module {
         return mc != null && mc.player != null && mc.level != null;
     }
 
-    private void renderPlayerInfo(MapRenderContext ctx, Vec3 pos) {
+    private void renderPlayerInfoLegacy(MapRenderContext ctx, Vec3 pos) {
         if (pos == null || ctx == null) return;
 
         try {
@@ -171,13 +191,13 @@ public class RegionMap extends Module {
 
             textRenderer.begin(1.0, false, true);
 
-            String coordsText = String.format("Position: X: %d, Z: %d", (int)pos.x, (int)pos.z);
+            String coordsText = String.format("Position: X: %d, Z: %d", (int) pos.x, (int) pos.z);
             textRenderer.render(coordsText, ctx.mapX, infoY, Color.WHITE, false);
 
             int currentRegionId = mapData.getRegionAt(pos.x, pos.z);
             if (currentRegionId != -1) {
                 String regionInfo = String.format("Current Region: %d (%s)",
-                        currentRegionId, mapData.getRegionTypeName(pos.x, pos.z));
+                        currentRegionId, mapData.getContinentName(pos.x, pos.z));
                 textRenderer.render(regionInfo, ctx.mapX, infoY + 15, Color.WHITE, false);
             }
 
@@ -187,22 +207,22 @@ public class RegionMap extends Module {
         }
     }
 
-    private void renderRegionLegend(MapRenderContext ctx) {
+    private void renderRegionLegendLegacy(MapRenderContext ctx) {
         if (ctx == null) return;
 
         try {
             int legendStartY = ctx.mapY + ctx.getMapHeight() +
                     (enableCoordinates.get() ? 45 : 15);
 
-            String[] regionTypes = mapData.getRegionTypeNames();
-            Color[] regionTypeColors = mapData.getRegionTypeColors();
+            String[] continentNames = mapData.getContinentNames();
+            Color[] continentColors = mapData.getContinentColors();
 
-            if (regionTypes == null || regionTypeColors == null) return;
+            if (continentNames == null || continentColors == null) return;
 
             Renderer2D.COLOR.begin();
-            for (int i = 0; i < regionTypes.length && i < regionTypeColors.length; i++) {
+            for (int i = 0; i < continentNames.length && i < continentColors.length; i++) {
                 int legendY = legendStartY + i * 16;
-                Renderer2D.COLOR.quad(ctx.mapX, legendY, 14, 14, regionTypeColors[i]);
+                Renderer2D.COLOR.quad(ctx.mapX, legendY, 14, 14, continentColors[i]);
             }
             Renderer2D.COLOR.render();
 
@@ -210,9 +230,9 @@ public class RegionMap extends Module {
             if (textRenderer == null) return;
 
             textRenderer.begin(1.0, false, true);
-            for (int i = 0; i < regionTypes.length; i++) {
+            for (int i = 0; i < continentNames.length; i++) {
                 int legendY = legendStartY + i * 16 + 3;
-                textRenderer.render(regionTypes[i], ctx.mapX + 18, legendY, Color.WHITE, false);
+                textRenderer.render(continentNames[i], ctx.mapX + 18, legendY, Color.WHITE, false);
             }
             textRenderer.end();
         } catch (Exception e) {
@@ -220,29 +240,106 @@ public class RegionMap extends Module {
         }
     }
 
+    private int renderPlayerInfoAdvanced(MapRenderContext ctx, Vec3 pos, int startY) {
+        if (pos == null || ctx == null) return startY;
+
+        try {
+            TextRenderer textRenderer = TextRenderer.get();
+            if (textRenderer == null) return startY;
+
+            textRenderer.begin(1.0, false, true);
+
+            String coordsText = String.format("Position: X: %d, Z: %d", (int) pos.x, (int) pos.z);
+            textRenderer.render(coordsText, ctx.mapX, startY, Color.WHITE, false);
+
+            int regionId = mapData.getRegionAt(pos.x, pos.z);
+            if (regionId != -1) {
+                String regionInfo = String.format("Current Region: %d (%s)",
+                        regionId, mapData.getContinentName(pos.x, pos.z));
+                textRenderer.render(regionInfo, ctx.mapX, startY + 15, Color.WHITE, false);
+            }
+
+            textRenderer.end();
+
+            return startY + (regionId != -1 ? 31 : 16);
+        } catch (Exception e) {
+            LOG.error("Unhandled error in " + getClass().getSimpleName(), e);
+            return startY;
+        }
+    }
+
+    private int renderRegionLegendAdvanced(MapRenderContext ctx, int startY) {
+        if (ctx == null) return startY;
+
+        try {
+            RegionCategory[] categories = RegionCategory.legendCategories();
+
+            Renderer2D.COLOR.begin();
+            for (int i = 0; i < categories.length; i++) {
+                int legendY = startY + i * 16;
+                Renderer2D.COLOR.quad(ctx.mapX, legendY, 14, 14, categories[i].color);
+            }
+            Renderer2D.COLOR.render();
+
+            TextRenderer textRenderer = TextRenderer.get();
+            if (textRenderer == null) return startY + categories.length * 16;
+
+            textRenderer.begin(1.0, false, true);
+            for (int i = 0; i < categories.length; i++) {
+                int legendY = startY + i * 16 + 3;
+                textRenderer.render(categories[i].label, ctx.mapX + 18, legendY, Color.WHITE, false);
+            }
+            textRenderer.end();
+
+            return startY + categories.length * 16 + 6;
+        } catch (Exception e) {
+            LOG.error("Unhandled error in " + getClass().getSimpleName(), e);
+            return startY;
+        }
+    }
+
+    private enum RegionCategory {
+        NONE("", null),
+        GLITCHED("Glitched (no rtp spots)", new Color(190, 60, 220, 255)),
+        MEDIA_BALTOP("Good for media / baltop", new Color(70, 130, 220, 255)),
+        MEDIA_OTHER("Good for media / other bases", new Color(170, 170, 170, 255));
+
+        final String label;
+        final Color color;
+
+        RegionCategory(String label, Color color) {
+            this.label = label;
+            this.color = color;
+        }
+
+        static RegionCategory[] legendCategories() {
+            return new RegionCategory[]{GLITCHED, MEDIA_BALTOP, MEDIA_OTHER};
+        }
+    }
+
     private static class MapDataManager {
-        private static final int MAP_SIZE = 9;
+        private static final int GRID_ROWS = 9;
+        private static final int GRID_COLS = 9;
         private static final double REGION_SIZE = 50000.0;
         private static final double MAP_OFFSET = 225000.0;
 
+        private static final String[] CONTINENT_NAMES = {
+                "EU Central", "EU West", "NA East", "NA West", "Asia", "Oceania"
+        };
+
+        private static final Color[] CONTINENT_COLORS = {
+                new Color(159, 206, 99, 255),
+                new Color(0, 166, 99, 255),
+                new Color(79, 173, 234, 255),
+                new Color(47, 110, 186, 255),
+                new Color(245, 194, 66, 255),
+                new Color(252, 136, 3, 255)
+        };
+
         private final Map<Integer, RegionInfo> regionMap;
-        private final String[] regionTypeNames;
-        private final Color[] regionTypeColors;
 
         public MapDataManager() {
             this.regionMap = new HashMap<>();
-            this.regionTypeNames = new String[]{
-                    "EU Central", "EU West", "NA East", "NA West", "Asia", "Oceania"
-            };
-            this.regionTypeColors = new Color[]{
-                    new Color(159, 206, 99, 255),
-                    new Color(0, 166, 99, 255),
-                    new Color(79, 173, 234, 255),
-                    new Color(47, 110, 186, 255),
-                    new Color(245, 194, 66, 255),
-                    new Color(252, 136, 3, 255)
-            };
-
             initializeRegionData();
         }
 
@@ -260,16 +357,42 @@ public class RegionMap extends Module {
             };
 
             for (int i = 0; i < regionLayout.length; i++) {
-                int row = i / MAP_SIZE;
-                int col = i % MAP_SIZE;
+                int row = i / GRID_COLS;
+                int col = i % GRID_COLS;
 
-                if (regionLayout[i].length >= 2) {
-                    int regionId = regionLayout[i][0];
-                    int regionType = Math.min(regionLayout[i][1], regionTypeNames.length - 1);
+                int regionId = regionLayout[i][0];
+                int continentType = Math.min(regionLayout[i][1], CONTINENT_NAMES.length - 1);
+                RegionCategory category = CATEGORY_OVERRIDES.getOrDefault(regionId, RegionCategory.NONE);
 
-                    regionMap.put(i, new RegionInfo(regionId, regionType, row, col));
-                }
+                regionMap.put(i, new RegionInfo(regionId, category, continentType, row, col));
             }
+        }
+
+        private static final Map<Integer, RegionCategory> CATEGORY_OVERRIDES = new HashMap<>();
+        static {
+            CATEGORY_OVERRIDES.put(89, RegionCategory.GLITCHED);
+            CATEGORY_OVERRIDES.put(90, RegionCategory.GLITCHED);
+            CATEGORY_OVERRIDES.put(97, RegionCategory.GLITCHED);
+
+            CATEGORY_OVERRIDES.put(4, RegionCategory.MEDIA_BALTOP);
+            CATEGORY_OVERRIDES.put(5, RegionCategory.MEDIA_BALTOP);
+            CATEGORY_OVERRIDES.put(8, RegionCategory.MEDIA_BALTOP);
+            CATEGORY_OVERRIDES.put(30, RegionCategory.MEDIA_BALTOP);
+
+            CATEGORY_OVERRIDES.put(2, RegionCategory.MEDIA_OTHER);
+            CATEGORY_OVERRIDES.put(7, RegionCategory.MEDIA_OTHER);
+            CATEGORY_OVERRIDES.put(28, RegionCategory.MEDIA_OTHER);
+            CATEGORY_OVERRIDES.put(29, RegionCategory.MEDIA_OTHER);
+            CATEGORY_OVERRIDES.put(32, RegionCategory.MEDIA_OTHER);
+            CATEGORY_OVERRIDES.put(34, RegionCategory.MEDIA_OTHER);
+            CATEGORY_OVERRIDES.put(59, RegionCategory.MEDIA_OTHER);
+            CATEGORY_OVERRIDES.put(86, RegionCategory.MEDIA_OTHER);
+            CATEGORY_OVERRIDES.put(88, RegionCategory.MEDIA_OTHER);
+            CATEGORY_OVERRIDES.put(98, RegionCategory.MEDIA_OTHER);
+            CATEGORY_OVERRIDES.put(99, RegionCategory.MEDIA_OTHER);
+            CATEGORY_OVERRIDES.put(109, RegionCategory.MEDIA_OTHER);
+            CATEGORY_OVERRIDES.put(112, RegionCategory.MEDIA_OTHER);
+            CATEGORY_OVERRIDES.put(113, RegionCategory.MEDIA_OTHER);
         }
 
         public RegionInfo getRegionInfo(int gridIndex) {
@@ -280,7 +403,7 @@ public class RegionMap extends Module {
             try {
                 int[] gridPos = worldToGrid(worldX, worldZ);
                 if (isValidGridPosition(gridPos[0], gridPos[1])) {
-                    int index = gridPos[1] * MAP_SIZE + gridPos[0];
+                    int index = gridPos[1] * GRID_COLS + gridPos[0];
                     RegionInfo info = regionMap.get(index);
                     return info != null ? info.regionId : -1;
                 }
@@ -290,15 +413,27 @@ public class RegionMap extends Module {
             return -1;
         }
 
-        public String getRegionTypeName(double worldX, double worldZ) {
+        public RegionCategory getCategoryAt(double worldX, double worldZ) {
             try {
                 int[] gridPos = worldToGrid(worldX, worldZ);
                 if (isValidGridPosition(gridPos[0], gridPos[1])) {
-                    int index = gridPos[1] * MAP_SIZE + gridPos[0];
+                    int index = gridPos[1] * GRID_COLS + gridPos[0];
                     RegionInfo info = regionMap.get(index);
-                    if (info != null && info.regionType >= 0 && info.regionType < regionTypeNames.length) {
-                        return regionTypeNames[info.regionType];
-                    }
+                    if (info != null) return info.category;
+                }
+            } catch (Exception e) {
+                LOG.error("Unhandled error in " + getClass().getSimpleName(), e);
+            }
+            return RegionCategory.NONE;
+        }
+
+        public String getContinentName(double worldX, double worldZ) {
+            try {
+                int[] gridPos = worldToGrid(worldX, worldZ);
+                if (isValidGridPosition(gridPos[0], gridPos[1])) {
+                    int index = gridPos[1] * GRID_COLS + gridPos[0];
+                    RegionInfo info = regionMap.get(index);
+                    if (info != null) return CONTINENT_NAMES[info.continentType];
                 }
             } catch (Exception e) {
                 LOG.error("Unhandled error in " + getClass().getSimpleName(), e);
@@ -306,26 +441,26 @@ public class RegionMap extends Module {
             return "Unknown";
         }
 
-        public Color getRegionColor(int regionType) {
-            if (regionType >= 0 && regionType < regionTypeColors.length) {
-                return regionTypeColors[regionType];
+        public Color getContinentColor(int continentType) {
+            if (continentType >= 0 && continentType < CONTINENT_COLORS.length) {
+                return CONTINENT_COLORS[continentType];
             }
             return Color.WHITE;
         }
 
-        public String[] getRegionTypeNames() {
-            return regionTypeNames.clone();
+        public String[] getContinentNames() {
+            return CONTINENT_NAMES.clone();
         }
 
-        public Color[] getRegionTypeColors() {
-            return regionTypeColors.clone();
+        public Color[] getContinentColors() {
+            return CONTINENT_COLORS.clone();
         }
 
         public int[] worldToGrid(double worldX, double worldZ) {
             if (REGION_SIZE == 0) return new int[]{0, 0};
 
-            int gridX = (int)((worldX + MAP_OFFSET) / REGION_SIZE);
-            int gridZ = (int)((worldZ + MAP_OFFSET) / REGION_SIZE);
+            int gridX = (int) ((worldX + MAP_OFFSET) / REGION_SIZE);
+            int gridZ = (int) ((worldZ + MAP_OFFSET) / REGION_SIZE);
             return new int[]{gridX, gridZ};
         }
 
@@ -342,23 +477,29 @@ public class RegionMap extends Module {
         }
 
         private boolean isValidGridPosition(int gridX, int gridZ) {
-            return gridX >= 0 && gridX < MAP_SIZE && gridZ >= 0 && gridZ < MAP_SIZE;
+            return gridX >= 0 && gridX < GRID_COLS && gridZ >= 0 && gridZ < GRID_ROWS;
         }
 
-        public int getMapSize() {
-            return MAP_SIZE;
+        public int getGridCols() {
+            return GRID_COLS;
+        }
+
+        public int getGridRows() {
+            return GRID_ROWS;
         }
     }
 
     private static class RegionInfo {
         final int regionId;
-        final int regionType;
+        final RegionCategory category;
+        final int continentType;
         final int gridRow;
         final int gridCol;
 
-        RegionInfo(int regionId, int regionType, int gridRow, int gridCol) {
+        RegionInfo(int regionId, RegionCategory category, int continentType, int gridRow, int gridCol) {
             this.regionId = regionId;
-            this.regionType = regionType;
+            this.category = category;
+            this.continentType = continentType;
             this.gridRow = gridRow;
             this.gridCol = gridCol;
         }
@@ -377,11 +518,11 @@ public class RegionMap extends Module {
         }
 
         int getMapWidth() {
-            return mapData.getMapSize() * cellSize;
+            return mapData.getGridCols() * cellSize;
         }
 
         int getMapHeight() {
-            return mapData.getMapSize() * cellSize;
+            return mapData.getGridRows() * cellSize;
         }
     }
 
@@ -392,7 +533,7 @@ public class RegionMap extends Module {
 
             try {
                 Color bgColor = new Color(mapBackgroundColor.get());
-                bgColor.a = (int)(ctx.transparency * 255.0);
+                bgColor.a = (int) (ctx.transparency * 255.0);
 
                 Renderer2D.COLOR.begin();
                 Renderer2D.COLOR.quad(ctx.mapX, ctx.mapY, ctx.getMapWidth(), ctx.getMapHeight(), bgColor);
@@ -402,29 +543,39 @@ public class RegionMap extends Module {
             }
         }
 
-        void renderRegionCells(MapRenderContext ctx, MapDataManager dataManager) {
+        void renderRegionCells(MapRenderContext ctx, MapDataManager dataManager, boolean legacyMode) {
             if (ctx == null || dataManager == null) return;
 
             try {
                 Renderer2D.COLOR.begin();
 
-                int mapSize = dataManager.getMapSize();
-                for (int row = 0; row < mapSize; row++) {
-                    for (int col = 0; col < mapSize; col++) {
-                        int index = row * mapSize + col;
+                int rows = dataManager.getGridRows();
+                int cols = dataManager.getGridCols();
+
+                for (int row = 0; row < rows; row++) {
+                    for (int col = 0; col < cols; col++) {
+                        int index = row * cols + col;
                         RegionInfo regionInfo = dataManager.getRegionInfo(index);
 
-                        if (regionInfo != null) {
+                        if (regionInfo == null) continue;
+
+                        Color cellColor = null;
+
+                        if (legacyMode) {
+                            cellColor = dataManager.getContinentColor(regionInfo.continentType);
+                        } else if (regionInfo.category != RegionCategory.NONE) {
+                            cellColor = regionInfo.category.color;
+                        }
+
+                        if (cellColor != null) {
                             int cellX = ctx.mapX + col * ctx.cellSize;
                             int cellY = ctx.mapY + row * ctx.cellSize;
 
-                            Color regionColor = dataManager.getRegionColor(regionInfo.regionType);
-                            if (regionColor != null) {
-                                regionColor.a = (int)(ctx.transparency * 255.0);
+                            Color fill = new Color(cellColor);
+                            fill.a = (int) (ctx.transparency * 255.0);
 
-                                Renderer2D.COLOR.quad(cellX + 1, cellY + 1,
-                                        ctx.cellSize - 2, ctx.cellSize - 2, regionColor);
-                            }
+                            Renderer2D.COLOR.quad(cellX + 1, cellY + 1,
+                                    ctx.cellSize - 2, ctx.cellSize - 2, fill);
                         }
                     }
                 }
@@ -442,14 +593,15 @@ public class RegionMap extends Module {
                 Renderer2D.COLOR.begin();
                 Color lineColor = new Color(gridColor);
 
-                int mapSize = mapData.getMapSize();
+                int cols = mapData.getGridCols();
+                int rows = mapData.getGridRows();
 
-                for (int i = 0; i <= mapSize; i++) {
+                for (int i = 0; i <= cols; i++) {
                     int lineX = ctx.mapX + i * ctx.cellSize;
                     Renderer2D.COLOR.quad(lineX, ctx.mapY, 1, ctx.getMapHeight(), lineColor);
                 }
 
-                for (int i = 0; i <= mapSize; i++) {
+                for (int i = 0; i <= rows; i++) {
                     int lineY = ctx.mapY + i * ctx.cellSize;
                     Renderer2D.COLOR.quad(ctx.mapX, lineY, ctx.getMapWidth(), 1, lineColor);
                 }
@@ -469,10 +621,12 @@ public class RegionMap extends Module {
 
                 textRenderer.begin(textScale, false, true);
 
-                int mapSize = dataManager.getMapSize();
-                for (int row = 0; row < mapSize; row++) {
-                    for (int col = 0; col < mapSize; col++) {
-                        int index = row * mapSize + col;
+                int rows = dataManager.getGridRows();
+                int cols = dataManager.getGridCols();
+
+                for (int row = 0; row < rows; row++) {
+                    for (int col = 0; col < cols; col++) {
+                        int index = row * cols + col;
                         RegionInfo regionInfo = dataManager.getRegionInfo(index);
 
                         if (regionInfo != null) {
@@ -506,13 +660,13 @@ public class RegionMap extends Module {
             try {
                 int[] gridPos = mapData.worldToGrid(playerPos.x, playerPos.z);
 
-                if (gridPos[0] >= 0 && gridPos[0] < mapData.getMapSize() &&
-                        gridPos[1] >= 0 && gridPos[1] < mapData.getMapSize()) {
+                if (gridPos[0] >= 0 && gridPos[0] < mapData.getGridCols() &&
+                        gridPos[1] >= 0 && gridPos[1] < mapData.getGridRows()) {
 
                     double[] cellPos = mapData.worldToCellPosition(playerPos.x, playerPos.z);
 
-                    int indicatorX = ctx.mapX + gridPos[0] * ctx.cellSize + (int)(cellPos[0] * ctx.cellSize);
-                    int indicatorY = ctx.mapY + gridPos[1] * ctx.cellSize + (int)(cellPos[1] * ctx.cellSize);
+                    int indicatorX = ctx.mapX + gridPos[0] * ctx.cellSize + (int) (cellPos[0] * ctx.cellSize);
+                    int indicatorY = ctx.mapY + gridPos[1] * ctx.cellSize + (int) (cellPos[1] * ctx.cellSize);
 
                     double rotationAngle = Math.toRadians(-yaw - 90.0);
                     renderDirectionalIndicator(indicatorX, indicatorY, rotationAngle, indicatorColor);
@@ -528,16 +682,16 @@ public class RegionMap extends Module {
                 Color indicatorCol = new Color(color);
                 int arrowSize = 9;
 
-                int tipX = centerX + (int)(Math.cos(angle) * arrowSize);
-                int tipY = centerY - (int)(Math.sin(angle) * arrowSize);
+                int tipX = centerX + (int) (Math.cos(angle) * arrowSize);
+                int tipY = centerY - (int) (Math.sin(angle) * arrowSize);
 
                 double leftBaseAngle = angle + Math.toRadians(135.0);
                 double rightBaseAngle = angle - Math.toRadians(135.0);
 
-                int leftBaseX = centerX + (int)(Math.cos(leftBaseAngle) * arrowSize);
-                int leftBaseY = centerY - (int)(Math.sin(leftBaseAngle) * arrowSize);
-                int rightBaseX = centerX + (int)(Math.cos(rightBaseAngle) * arrowSize);
-                int rightBaseY = centerY - (int)(Math.sin(rightBaseAngle) * arrowSize);
+                int leftBaseX = centerX + (int) (Math.cos(leftBaseAngle) * arrowSize);
+                int leftBaseY = centerY - (int) (Math.sin(leftBaseAngle) * arrowSize);
+                int rightBaseX = centerX + (int) (Math.cos(rightBaseAngle) * arrowSize);
+                int rightBaseY = centerY - (int) (Math.sin(rightBaseAngle) * arrowSize);
 
                 drawTriangleFilled(tipX, tipY, leftBaseX, leftBaseY, rightBaseX, rightBaseY, indicatorCol);
                 Renderer2D.COLOR.render();
