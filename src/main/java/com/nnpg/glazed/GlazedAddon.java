@@ -91,6 +91,7 @@ public class GlazedAddon extends MeteorAddon {
         Modules.get().add(new SpotifyHud());
         Modules.get().add(new TabDetector());
         Modules.get().add(new TpaMacro());
+        Modules.get().add(new UdRelog());
 
         // pvp
         Modules.get().add(new AimAssist());
