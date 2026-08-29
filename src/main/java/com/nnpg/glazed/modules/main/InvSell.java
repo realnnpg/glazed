@@ -19,11 +19,6 @@ import net.minecraft.world.item.Items;
 
 import java.util.Random;
 
-/**
- * Sells the whole inventory through /ah sell. Works the hotbar the same way AHSell does, then
- * opens the inventory and pulls the next batch down into the empty hotbar, until nothing sellable
- * is left.
- */
 public class InvSell extends Module {
     private final SettingGroup sgGeneral = settings.getDefaultGroup();
     private final SettingGroup sgTiming = settings.createGroup("Timing");
@@ -196,7 +191,6 @@ public class InvSell extends Module {
 
     @Override
     public void onDeactivate() {
-        // never leave the inventory hanging open because the module was switched off mid-refill
         closeInventoryScreen();
         state = State.SELECT;
         delayCounter = 0;
@@ -229,13 +223,11 @@ public class InvSell extends Module {
     }
 
     private void tickSelect() {
-        // hotbar exhausted, go pull the next batch down
         if (currentSlot > 8) {
             state = State.REFILL_OPEN;
             return;
         }
 
-        // the sell flow runs with no screen up, same as typing the command by hand
         if (isInventoryScreenOpen()) {
             closeInventoryScreen();
             delayCounter = jitter(screenDelay.get(), 1);
@@ -249,9 +241,6 @@ public class InvSell extends Module {
             return;
         }
 
-        // client-side only. the carried item packet is not flushed until MultiPlayerGameMode.tick(),
-        // which runs after TickEvent.Pre, so yield a tick before the command or the server sells
-        // whatever slot it still thinks is held
         VersionUtil.setSelectedSlot(mc.player, currentSlot);
         delayCounter = jitter(slotDelay.get(), 1);
         state = State.SEND;
@@ -309,9 +298,7 @@ public class InvSell extends Module {
         }
     }
 
-    /** Gets the inventory actually open before any slot gets clicked. */
     private void tickRefillOpen() {
-        // a swap only lands in the player's own inventory menu, so make sure a shop menu is gone
         if (mc.player.containerMenu != mc.player.inventoryMenu) {
             GlazedSell.close();
             delayCounter = jitter(screenDelay.get(), 1);
@@ -328,24 +315,17 @@ public class InvSell extends Module {
             return;
         }
 
-        // opening your own inventory sends nothing by itself, but it is what stops you sprinting
-        // and puts the client in the state the following slot clicks are supposed to come from
         mc.setScreen(new InventoryScreen(mc.player));
         delayCounter = jitter(screenDelay.get(), 1);
         state = State.REFILL;
     }
 
-    /**
-     * Moves one stack from the main inventory into a free hotbar slot. Runs once per refill-delay
-     * until the hotbar is stocked again, then closes up and restarts the hotbar pass.
-     */
     private void tickRefill() {
         if (mc.player.containerMenu != mc.player.inventoryMenu) {
             state = State.REFILL_OPEN;
             return;
         }
 
-        // something closed the screen under us, reopen before clicking anything
         if (openInventory.get() && !isInventoryScreenOpen()) {
             state = State.REFILL_OPEN;
             return;
@@ -354,7 +334,6 @@ public class InvSell extends Module {
         int source = firstSellable(InventoryMenu.INV_SLOT_START, InventoryMenu.INV_SLOT_END);
 
         if (source < 0) {
-            // nothing left upstairs. if the hotbar somehow refilled anyway, take another pass
             finishAfterClose = !hasSellableItem(0, 9);
             state = State.REFILL_CLOSE;
             return;
@@ -363,7 +342,6 @@ public class InvSell extends Module {
         int target = firstEmptyHotbarSlot();
 
         if (target < 0) {
-            // hotbar is stocked, go sell it before pulling anything else down
             finishAfterClose = false;
             state = State.REFILL_CLOSE;
             return;
@@ -371,12 +349,8 @@ public class InvSell extends Module {
 
         ItemStack before = mc.player.getInventory().getItem(source).copy();
 
-        // main inventory slots map 1:1 onto menu slots, and SWAP's button arg is the hotbar index,
-        // exactly like pressing 1-9 over a stack
         mc.gameMode.handleContainerInput(mc.player.inventoryMenu.containerId, source, target, ContainerInput.SWAP, mc.player);
 
-        // the swap is client-predicted, so this reads back immediately. if it did not take, stop
-        // rather than spinning on the same slot forever
         if (ItemStack.matches(before, mc.player.getInventory().getItem(source))) {
             if (++stalledRefills >= 3) {
                 if (notifications.get()) warning("Could not move items out of the inventory, stopping.");
@@ -419,10 +393,6 @@ public class InvSell extends Module {
         state = State.GAP;
     }
 
-    /**
-     * A listing that fails server side hands the item straight back. If we still hold as much of it
-     * as before the sale, nothing actually left, so stop rather than hammering the same item.
-     */
     private void tickVerify() {
         int after = countMatching(soldRef);
 
@@ -440,7 +410,6 @@ public class InvSell extends Module {
         state = State.GAP;
     }
 
-    /** Total count of everything in the inventory that matches ref, item and components alike. */
     private int countMatching(ItemStack ref) {
         if (ref.isEmpty()) return 0;
 
@@ -455,7 +424,6 @@ public class InvSell extends Module {
         return total;
     }
 
-    /** Spreads a delay by +/- timing-jitter percent, never below floor. */
     private int jitter(int ticks, int floor) {
         int pct = timingJitter.get();
         if (pct <= 0) return Math.max(floor, ticks);
@@ -468,7 +436,6 @@ public class InvSell extends Module {
         return mc.screen instanceof InventoryScreen;
     }
 
-    /** Closes it the way the key bind does, so the same ContainerClose the server expects goes out. */
     private void closeInventoryScreen() {
         if (mc.screen instanceof InventoryScreen screen) screen.onClose();
     }
@@ -484,7 +451,6 @@ public class InvSell extends Module {
     private void onChatMessage(ReceiveMessageEvent event) {
         String msg = event.getMessage().getString();
 
-        // never react to our own chat output, it re-enters this handler
         if (msg.contains("[Meteor]")) return;
 
         if (msg.contains("You have too many listed items.")) {
@@ -498,7 +464,6 @@ public class InvSell extends Module {
         return !enableFilter.get() || stack.is(filterItem.get());
     }
 
-    /** First inventory index in [from, to) holding something we want to sell, or -1. */
     private int firstSellable(int from, int to) {
         for (int slot = from; slot < to && slot < mc.player.getInventory().getContainerSize(); slot++) {
             if (shouldSell(mc.player.getInventory().getItem(slot))) return slot;

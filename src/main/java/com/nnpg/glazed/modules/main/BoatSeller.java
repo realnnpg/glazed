@@ -31,11 +31,6 @@ import java.util.Random;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-/**
- * Pulls boats from /orders, finds the cheapest matching auction, undercuts it, and lists every
- * boat individually. Boats already in the inventory are always finished before another order is
- * opened, including after the auction listing limit is reached.
- */
 public class BoatSeller extends Module {
     private final SettingGroup sgGeneral = settings.getDefaultGroup();
     private final SettingGroup sgOrders = settings.createGroup("Orders menu");
@@ -448,12 +443,8 @@ public class BoatSeller extends Module {
             return;
         }
 
-        // Price first so differently-priced listings can be reclaimed while the inventory still
-        // has room, before a fresh order fills it with boats.
         state = State.PRICE_SEND;
     }
-
-    // ---------------------------------------------------------------- orders
 
     private void tickOrdersSend() {
         markMenu();
@@ -630,8 +621,6 @@ public class BoatSeller extends Module {
         state = State.PRICE_SEND;
     }
 
-    // ---------------------------------------------------------------- price lookup
-
     private void tickPriceSend() {
         closeAnyMenu();
         mc.getConnection().sendCommand(resolvedPriceCommand());
@@ -675,8 +664,6 @@ public class BoatSeller extends Module {
             return;
         }
 
-        // Always inspect our listings. The collector only touches matching boats whose parsed
-        // price differs from listPrice, so listings already at the right price stay in the AH.
         collected = 0;
         state = State.COLLECT_SEND;
     }
@@ -750,8 +737,6 @@ public class BoatSeller extends Module {
 
         return (long) value;
     }
-
-    // ---------------------------------------------------------------- reclaim old-price listings
 
     private void tickCollectSend() {
         closeAnyMenu();
@@ -840,8 +825,6 @@ public class BoatSeller extends Module {
             return;
         }
 
-        // Someone may buy the listing between our scan and click. If the slot changed without a
-        // boat arriving, skip the stale entry and keep collecting the rest.
         if (collectSource < 0 || !ItemStack.matches(collectSnapshot, itemAt(menu, collectSource))) {
             collectSnapshot = ItemStack.EMPTY;
             waited = 0;
@@ -878,7 +861,6 @@ public class BoatSeller extends Module {
         state = State.ORDERS_SEND;
     }
 
-    /** A matching own listing whose price is not the current target, or -1. */
     private int findDifferentlyPricedBoat(ChestMenu menu) {
         Pattern pattern;
         try {
@@ -898,12 +880,8 @@ public class BoatSeller extends Module {
             if (price <= 0 && unpricedFallback < 0) unpricedFallback = slot;
         }
 
-        // On the first pass, an unpriced matching entry is safer to reclaim than leave stranded.
-        // Normal Donut listings expose a price, so this is only a compatibility fallback.
         return unpricedFallback;
     }
-
-    // ---------------------------------------------------------------- auction listing
 
     private void tickSellSelect() {
         if (currentSlot > 8) {
@@ -1020,8 +998,6 @@ public class BoatSeller extends Module {
                 return;
             }
 
-            // Preserve a full hotbar: park one item in the boat's main-inventory slot, use its
-            // hotbar position for every listing, then swap the original item back at the end.
             displacedMainSlot = source;
             displacedHotbarSlot = target;
             displacedHotbarItem = mc.player.getInventory().getItem(target).copy();
@@ -1050,8 +1026,6 @@ public class BoatSeller extends Module {
         delayCounter = delay(screenDelay, false);
         state = State.SELL_SELECT;
     }
-
-    // ---------------------------------------------------------------- helpers
 
     private String resolvedPriceCommand() {
         String override = priceCommand.get().trim();
@@ -1124,7 +1098,6 @@ public class BoatSeller extends Module {
         return -1;
     }
 
-    /** Restores the hotbar item temporarily displaced to make room for listings. */
     private void restoreDisplacedHotbarItem() {
         if (displacedMainSlot < 0 || displacedHotbarSlot < 0 || displacedHotbarItem.isEmpty()) return;
         if (mc.player == null || mc.gameMode == null) return;

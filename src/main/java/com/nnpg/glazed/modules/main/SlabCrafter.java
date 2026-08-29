@@ -26,23 +26,11 @@ import net.minecraft.world.phys.Vec3;
 
 import java.util.Random;
 
-/**
- * Pulls logs out of the /orders storage and turns them into slabs on the crafting table you are
- * looking at.
- *
- * One cycle: /orders, click the chest three from the end, click the first entry, click the chest in
- * the middle, shift a few stacks of logs out, then open the table and craft logs to planks and
- * planks to slabs. Looking away from the table is how you pause it.
- *
- * The menu chain is the same one Order Dropper walks, and the crafting half leans on how the
- * vanilla crafting menu routes shift clicks: from your inventory they land in the grid, and on the
- * result slot the server repeats the craft until the ingredients run out.
- */
 public class SlabCrafter extends Module {
     private static final int RESULT_SLOT = 0;
     private static final int GRID_FIRST = 1;
     private static final int GRID_LAST = 9;
-    private static final int ROW_LAST = 3;   // the slab recipe wants three planks in the top row
+    private static final int ROW_LAST = 3;
     private static final int INV_FIRST = 10;
     private static final int MENU_SLOTS = 46;
 
@@ -379,7 +367,6 @@ public class SlabCrafter extends Module {
             return;
         }
 
-        // a table that never finishes is worse than one that gives up, so put a ceiling on it
         if (isCrafting() && ++craftTicks > craftWatchdog.get()) {
             if (notifications.get()) warning("Crafting is taking far too long, backing off.");
             endCycleBackoff();
@@ -416,13 +403,10 @@ public class SlabCrafter extends Module {
         }
     }
 
-    // ---------------------------------------------------------------- cycle start
-
     private void tickIdle() {
         BlockPos target = resolveTable(true);
 
         if (target == null) {
-            // say so. a module that waits without a word is indistinguishable from a broken one
             announceWaiting();
             delayCounter = jitter(12, 4);
             return;
@@ -439,7 +423,6 @@ public class SlabCrafter extends Module {
             return;
         }
 
-        // one stack of logs becomes roughly eight of slabs, so nine free slots buys one stack
         targetStacks = Math.max(1, Math.min(logStacks.get(), free / 9));
 
         if (!fetchLogs.get() || countLogs() >= targetStacks * 64) {
@@ -450,7 +433,6 @@ public class SlabCrafter extends Module {
         state = State.ORDERS_SEND;
     }
 
-    /** The crafting table the crosshair is on, or null. */
     private BlockPos lookedAtTable() {
         if (!(mc.hitResult instanceof BlockHitResult hit)) return null;
         if (hit.getType() != HitResult.Type.BLOCK) return null;
@@ -458,16 +440,11 @@ public class SlabCrafter extends Module {
         return isTable(hit.getBlockPos()) ? hit.getBlockPos() : null;
     }
 
-    /** Identity first: the block a server hands you is the real one whatever class it maps to. */
     private boolean isTable(BlockPos pos) {
         Block block = mc.level.getBlockState(pos).getBlock();
         return block == Blocks.CRAFTING_TABLE || block instanceof CraftingTableBlock;
     }
 
-    /**
-     * The table to work at. The crosshair wins, and starting a cycle needs it. Once a cycle is
-     * under way the table has not moved, so a wobble mid run does not throw away the trip.
-     */
     private BlockPos resolveTable(boolean starting) {
         BlockPos looked = lookedAtTable();
         if (looked != null) return looked;
@@ -503,7 +480,6 @@ public class SlabCrafter extends Module {
         return best;
     }
 
-    /** Every few seconds, and named: knowing what the crosshair is on is the whole answer. */
     private void announceWaiting() {
         if (!notifications.get()) return;
         if (idleNags++ % 8 != 0) return;
@@ -516,8 +492,6 @@ public class SlabCrafter extends Module {
 
         info("Waiting: point your crosshair at a crafting table.");
     }
-
-    // ---------------------------------------------------------------- the orders menus
 
     private void tickOrdersSend() {
         markMenu();
@@ -541,7 +515,6 @@ public class SlabCrafter extends Module {
         }
     }
 
-    /** The chest three from the end of the orders menu, the same one Order Dropper clicks. */
     private void tickOrdersClick() {
         ChestMenu menu = GlazedShop.openContainer();
 
@@ -603,7 +576,6 @@ public class SlabCrafter extends Module {
         clickMenu(menu, slot, State.LOGS_WAIT);
     }
 
-    /** Shared wait: a menu counts as new when the id changes, or when the contents do. */
     private void tickMenuWait(State next, String what) {
         ChestMenu menu = GlazedShop.openContainer();
 
@@ -620,8 +592,6 @@ public class SlabCrafter extends Module {
             endCycleBackoff();
         }
     }
-
-    // ---------------------------------------------------------------- taking the logs
 
     private void tickTake() {
         ChestMenu menu = GlazedShop.openContainer();
@@ -661,15 +631,9 @@ public class SlabCrafter extends Module {
         state = State.TAKE_SETTLE;
     }
 
-    /**
-     * Server menus answer clicks a tick or two later and resync whatever they refuse, so what
-     * landed in the inventory is the only honest measure of whether that click did anything.
-     */
     private void tickTakeSettle() {
         ChestMenu menu = GlazedShop.openContainer();
 
-        // a plain click can leave the stack on the cursor. put it straight back, a menu closed on
-        // a held stack throws it on the floor
         if (menu != null && !menu.getCarried().isEmpty() && takeSource >= 0) {
             mc.gameMode.handleContainerInput(menu.containerId, takeSource, 0, ContainerInput.PICKUP, mc.player);
             delayCounter = takeDelay();
@@ -686,7 +650,6 @@ public class SlabCrafter extends Module {
 
         stalled++;
 
-        // the server ignored a shift click twice, so try it the other way before giving up
         if (takeMode.get() == TakeMode.Auto && !plainClick && stalled >= 2) {
             plainClick = true;
             stalled = 0;
@@ -718,7 +681,6 @@ public class SlabCrafter extends Module {
         delayCounter = jitter(screenDelay.get(), 2);
 
         if (countLogs() <= 0) {
-            // nothing came out, do not come straight back and re-run the command
             endCycleBackoff();
             return;
         }
@@ -726,8 +688,6 @@ public class SlabCrafter extends Module {
         if (notifications.get()) info("Pulled %d stack(s) of logs, crafting.", grabbed);
         state = State.TABLE_OPEN;
     }
-
-    // ---------------------------------------------------------------- the crafting table
 
     private void tickTableOpen() {
         tablePos = resolveTable(false);
@@ -738,14 +698,12 @@ public class SlabCrafter extends Module {
             return;
         }
 
-        // the real hit when the crosshair is still on it, otherwise aim at the middle of the block
         BlockHitResult hit = mc.hitResult instanceof BlockHitResult looked
             && looked.getType() == HitResult.Type.BLOCK
             && looked.getBlockPos().equals(tablePos)
                 ? looked
                 : new BlockHitResult(Vec3.atCenterOf(tablePos), Direction.UP, tablePos, false);
 
-        // the same call a right click makes, swing included
         mc.gameMode.useItemOn(mc.player, InteractionHand.MAIN_HAND, hit);
         mc.player.swing(InteractionHand.MAIN_HAND);
 
@@ -791,10 +749,6 @@ public class SlabCrafter extends Module {
         return menu.slots.size() >= MENU_SLOTS ? menu : null;
     }
 
-    /**
-     * Logs to planks. One log type at a time: the recipe takes a single ingredient, so a second
-     * kind of log in the grid would just stop it matching.
-     */
     private void tickPlanksPlace() {
         CraftingMenu menu = craftingMenu();
 
@@ -813,7 +767,6 @@ public class SlabCrafter extends Module {
             return;
         }
 
-        // grid has to hold nothing but the logs in the first slot
         if (tidyGrid(menu, GRID_FIRST, this::isLog)) return;
 
         if (!itemAt(menu, GRID_FIRST).isEmpty()) {
@@ -830,7 +783,6 @@ public class SlabCrafter extends Module {
             return;
         }
 
-        // from the inventory a shift click lands in the grid, nowhere else
         mc.gameMode.handleContainerInput(menu.containerId, source, 0, ContainerInput.QUICK_MOVE, mc.player);
 
         waited = 0;
@@ -869,17 +821,12 @@ public class SlabCrafter extends Module {
         craftSnapshot = countLogs();
         outputSnapshot = countPlanks();
 
-        // on the result slot the server repeats the craft until the logs run out or you fill up
         mc.gameMode.handleContainerInput(menu.containerId, RESULT_SLOT, 0, ContainerInput.QUICK_MOVE, mc.player);
 
         delayCounter = jitter(craftDelay.get(), 2);
         state = State.PLANKS_PLACE;
     }
 
-    /**
-     * Planks to slabs. Three of one kind in the top row, so it works a single plank type at a
-     * time and splits the last stack across the row rather than leaving it behind.
-     */
     private void tickSlabsFill() {
         CraftingMenu menu = craftingMenu();
 
@@ -906,7 +853,6 @@ public class SlabCrafter extends Module {
             }
         }
 
-        // only the row, and only this plank type. anything else goes back to the inventory
         if (tidyGrid(menu, ROW_LAST, stack -> stack.is(plankType))) return;
 
         if (rowFilled(menu)) {
@@ -923,13 +869,11 @@ public class SlabCrafter extends Module {
             return;
         }
 
-        // nothing left to shift in, so halve what is already there into the empty slot
         if (splitIntoRow(menu)) {
             delayCounter = jitter(craftDelay.get(), 2);
             return;
         }
 
-        // this type cannot fill a row any more, hand the leftovers back and try the next one
         if (tidyGrid(menu, 0, stack -> false)) return;
 
         plankType = null;
@@ -973,10 +917,6 @@ public class SlabCrafter extends Module {
         state = State.SLABS_FILL;
     }
 
-    /**
-     * Throws the finished slabs on the floor, a stack a click. In an open menu that is what Q on a
-     * slot does, so it goes out as one throw packet rather than a swap into the hotbar.
-     */
     private void tickDrop() {
         CraftingMenu menu = craftingMenu();
 
@@ -997,7 +937,6 @@ public class SlabCrafter extends Module {
 
         ItemStack stack = itemAt(menu, slot);
 
-        // same slot, same count, over and over means the server is refusing it
         if (slot == dropSlot && stack.getCount() == dropCount) {
             if (++dropTries >= 5) {
                 if (notifications.get()) warning("Slabs will not drop, closing the table.");
@@ -1011,7 +950,6 @@ public class SlabCrafter extends Module {
             dropped++;
         }
 
-        // button 1 throws the whole stack, button 0 would be one item at a time
         mc.gameMode.handleContainerInput(menu.containerId, slot, 1, ContainerInput.THROW, mc.player);
 
         delayCounter = dropDelay();
@@ -1024,7 +962,6 @@ public class SlabCrafter extends Module {
     private void tickTableClose() {
         CraftingMenu menu = craftingMenu();
 
-        // never close on a held stack or a loaded grid, that is how items end up on the floor
         if (menu != null) {
             if (dropCarried(menu)) return;
             if (tidyGrid(menu, 0, stack -> false)) return;
@@ -1042,14 +979,6 @@ public class SlabCrafter extends Module {
         endCycleBackoff();
     }
 
-    // ---------------------------------------------------------------- crafting helpers
-
-    /**
-     * Returns items the grid should not be holding, one stack a tick. True means it did something
-     * and the caller should let the next tick pick up where this left off.
-     *
-     * @param keepUntil grid slots below this are allowed to keep matching stacks
-     */
     private boolean tidyGrid(CraftingMenu menu, int keepUntil, java.util.function.Predicate<ItemStack> keep) {
         for (int slot = GRID_FIRST; slot <= GRID_LAST; slot++) {
             ItemStack stack = itemAt(menu, slot);
@@ -1057,7 +986,6 @@ public class SlabCrafter extends Module {
             if (stack.isEmpty()) continue;
             if (slot <= keepUntil && keep.test(stack)) continue;
 
-            // same slot, same count, over and over means the server is refusing it
             if (slot == tidySlot && stack.getCount() == tidyCount) {
                 if (++tidyTries >= 5) {
                     if (notifications.get()) warning("The grid will not empty, closing the table.");
@@ -1082,7 +1010,6 @@ public class SlabCrafter extends Module {
         return false;
     }
 
-    /** All three row slots loaded, which is what the slab recipe wants. */
     private boolean rowFilled(CraftingMenu menu) {
         for (int slot = GRID_FIRST; slot <= ROW_LAST; slot++) {
             if (itemAt(menu, slot).isEmpty()) return false;
@@ -1091,11 +1018,6 @@ public class SlabCrafter extends Module {
         return true;
     }
 
-    /**
-     * Right click takes half a stack, left click puts it down, both in the same tick so the cursor
-     * is never left holding anything across a menu close. Repeated, this walks 64 planks down to
-     * a full row instead of stranding them.
-     */
     private boolean splitIntoRow(CraftingMenu menu) {
         int empty = -1;
         int fullest = -1;
@@ -1125,7 +1047,6 @@ public class SlabCrafter extends Module {
         return true;
     }
 
-    /** Safety net: anything left on the cursor goes back where it came from before we move on. */
     private boolean dropCarried(CraftingMenu menu) {
         if (menu.getCarried().isEmpty()) {
             carrySource = -1;
@@ -1134,7 +1055,6 @@ public class SlabCrafter extends Module {
         }
 
         if (++carryTries > 3) {
-            // closing hands it back rather than leaving us clicking at a slot that will not take it
             if (notifications.get()) warning("Could not put a held stack down, closing the table.");
             endCycleBackoff();
             return true;
@@ -1150,17 +1070,12 @@ public class SlabCrafter extends Module {
         return true;
     }
 
-    /**
-     * Did the last shift click on the result actually consume anything? A full inventory is the
-     * usual reason it did not, and without this check the module would happily click forever.
-     */
     private void checkCraftProgress(boolean slabsPhase) {
         if (craftSnapshot < 0) return;
 
         int inputNow = slabsPhase ? countPlanks() : countLogs();
         int outputNow = slabsPhase ? countSlabs() : countPlanks();
 
-        // one shift click on the result is many crafts, so count what arrived, not the stack size
         if (outputNow > outputSnapshot) {
             if (slabsPhase) madeSlabs += outputNow - outputSnapshot;
             else madePlanks += outputNow - outputSnapshot;
@@ -1177,7 +1092,6 @@ public class SlabCrafter extends Module {
         outputSnapshot = -1;
     }
 
-    /** The plank type with the most in the inventory, as long as there are three of them. */
     private Item bestPlank(CraftingMenu menu) {
         Item best = null;
         int bestCount = 0;
@@ -1205,8 +1119,6 @@ public class SlabCrafter extends Module {
         return best;
     }
 
-    // ---------------------------------------------------------------- menu helpers
-
     private void clickMenu(ChestMenu menu, int slot, State next) {
         markMenu();
         mc.gameMode.handleContainerInput(menu.containerId, slot, 0, ContainerInput.PICKUP, mc.player);
@@ -1216,7 +1128,6 @@ public class SlabCrafter extends Module {
         state = next;
     }
 
-    /** Snapshot of the open menu, so the next state can tell when the server swapped it out. */
     private void markMenu() {
         ChestMenu menu = GlazedShop.openContainer();
 
@@ -1230,7 +1141,6 @@ public class SlabCrafter extends Module {
         lastSignature = signature(menu);
     }
 
-    /** Some menus swap for a fresh id, others repaint in place, so watch for either. */
     private boolean isNewMenu(ChestMenu menu) {
         if (menu.containerId != lastMenuId) return true;
         return signature(menu) != lastSignature;
@@ -1273,7 +1183,6 @@ public class SlabCrafter extends Module {
         return -1;
     }
 
-    /** The chest closest to the centre of the menu, unless the configured slot already is one. */
     private int chestNearMiddle(ChestMenu menu) {
         int total = containerSlots(menu);
         int wanted = storageSlot.get();
@@ -1326,7 +1235,6 @@ public class SlabCrafter extends Module {
             || stack.is(Items.ENDER_CHEST) || stack.is(Items.BARREL);
     }
 
-    /** Every log, stripped log, wood and hyphae, crimson and warped stems included. */
     private boolean isLog(ItemStack stack) {
         return !stack.isEmpty() && stack.is(ItemTags.LOGS);
     }
@@ -1374,9 +1282,6 @@ public class SlabCrafter extends Module {
         return free;
     }
 
-    // ---------------------------------------------------------------- timing
-
-    /** Fresh number per click, so emptying an order has no fixed rhythm. */
     private int dropDelay() {
         return randomBetween(dropDelayMin.get(), dropDelayMax.get());
     }
@@ -1398,7 +1303,6 @@ public class SlabCrafter extends Module {
         state = State.COOLDOWN;
     }
 
-    /** Cycle that did no work. Longer, still randomised, so a dry order does not spam commands. */
     private void endCycleBackoff() {
         closeAnyMenu();
         delayCounter = jitter(idleBackoff.get(), 40);

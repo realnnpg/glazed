@@ -22,10 +22,6 @@ import net.minecraft.world.phys.HitResult;
 
 import java.util.Random;
 
-/**
- * Repeatedly empties the chest under the crosshair into the player's inventory, transfers the
- * inventory into /sell, and presses the green sell button.
- */
 public class ChestSeller extends Module {
     private final SettingGroup sgGeneral = settings.getDefaultGroup();
     private final SettingGroup sgTiming = settings.createGroup("Timing");

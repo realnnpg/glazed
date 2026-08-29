@@ -6,9 +6,6 @@ import meteordevelopment.meteorclient.commands.Command;
 import meteordevelopment.meteorclient.systems.modules.Modules;
 import net.minecraft.client.multiplayer.ClientSuggestionProvider;
 
-/**
- * Runs the ah listing remover on its own, so it can be tested without waiting for a limit cooldown.
- */
 public class RemoverTestCommand extends Command {
     public RemoverTestCommand() {
         super("removertest", "Runs the Iron Ah Restocker listing remover once, then stops.");
@@ -24,7 +21,6 @@ public class RemoverTestCommand extends Command {
                 return SINGLE_SUCCESS;
             }
 
-            // the tick handler only runs while the module is active, so switch it on first
             if (!module.isActive()) module.toggle();
 
             module.startRemoverTest();

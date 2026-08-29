@@ -34,14 +34,6 @@ import java.util.Random;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-/**
- * Restocks the auction house with single ingots.
- *
- * One cycle: read the cheapest per-unit price off the ah, take a full inventory of ingots out of
- * the chest you are looking at (one per slot), list every one of them at that price minus the
- * undercut, then go straight round again. The only thing that parks the module is the server
- * saying you have listed too many items.
- */
 public class IronAhRestocker extends Module {
     private final SettingGroup sgGeneral = settings.getDefaultGroup();
     private final SettingGroup sgPrice = settings.createGroup("Price lookup");
@@ -464,10 +456,7 @@ public class IronAhRestocker extends Module {
         }
     }
 
-    // ---------------------------------------------------------------- cycle start
-
     private void tickIdle() {
-        // a limit cooldown just ended: clear the unsold listings before pricing anything new
         if (pendingRemoval) {
             pendingRemoval = false;
 
@@ -481,8 +470,6 @@ public class IronAhRestocker extends Module {
             }
         }
 
-        // A stack returned by the AH is stock, not one listing. Finish spreading and selling
-        // inventory stock before taking anything else from the source chest.
         if (hasAnyItemInInventory()) {
             currentSlot = 0;
             listed = 0;
@@ -496,7 +483,6 @@ public class IronAhRestocker extends Module {
         BlockPos target = lookedAtChest();
 
         if (requireChestLook.get() && target == null) {
-            // just wait, silently. looking away is how you pause this thing
             delayCounter = jitter(12, 4);
             return;
         }
@@ -510,7 +496,6 @@ public class IronAhRestocker extends Module {
         state = State.PRICE_SEND;
     }
 
-    /** The chest the crosshair is on, or null. */
     private BlockPos lookedAtChest() {
         if (!(mc.hitResult instanceof BlockHitResult hit)) return null;
         if (hit.getType() != HitResult.Type.BLOCK) return null;
@@ -522,8 +507,6 @@ public class IronAhRestocker extends Module {
 
         return null;
     }
-
-    // ---------------------------------------------------------------- price lookup
 
     private void tickPriceSend() {
         mc.getConnection().sendCommand(priceCommand.get().trim());
@@ -545,7 +528,6 @@ public class IronAhRestocker extends Module {
 
             long price = cheapest - undercut.get();
 
-            // a retry has to actually be cheaper than the number that just bounced
             if (lastCycleFailed && lastAttemptPrice > 0) {
                 price = Math.min(price, lastAttemptPrice - failUndercut.get());
             }
@@ -581,7 +563,6 @@ public class IronAhRestocker extends Module {
         state = hasAnyItemInInventory() ? State.SPREAD_OPEN : State.CHEST_OPEN;
     }
 
-    /** Cheapest per-unit price across the listings in the menu. */
     private long cheapestPerUnit(ChestMenu menu) {
         Pattern pattern;
 
@@ -602,11 +583,8 @@ public class IronAhRestocker extends Module {
             long price = parseListingPrice(stack, pattern);
             if (price <= 0) continue;
 
-            // a single-item listing divides by 1, so this is a no-op there and still correct
-            // for a stack priced as a whole
             long unit = perUnit.get() ? Math.max(1, price / Math.max(1, stack.getCount())) : price;
 
-            // the ah comes sorted by price, so the first listing is already the cheapest
             if (firstListingOnly.get()) return unit;
 
             if (best < 0 || unit < best) best = unit;
@@ -615,10 +593,6 @@ public class IronAhRestocker extends Module {
         return best;
     }
 
-    /**
-     * Reads the price off a listing. A line that actually says "price" or carries a $ wins, so a
-     * stack count or a seller name in the lore cannot be mistaken for the number.
-     */
     private long parseListingPrice(ItemStack stack, Pattern pattern) {
         List<String> lines = new ArrayList<>();
         lines.add(stack.getHoverName().getString());
@@ -636,7 +610,6 @@ public class IronAhRestocker extends Module {
             if (price > 0) return price;
         }
 
-        // nothing labelled, fall back to the first number anywhere in the tooltip
         for (String line : lines) {
             long price = matchPrice(line, pattern);
             if (price > 0) return price;
@@ -675,8 +648,6 @@ public class IronAhRestocker extends Module {
         return (long) value;
     }
 
-    // ---------------------------------------------------------------- chest grab
-
     private void tickChestOpen() {
         BlockPos target = lookedAtChest();
 
@@ -694,7 +665,6 @@ public class IronAhRestocker extends Module {
             return;
         }
 
-        // same call the right click makes, swing included
         mc.gameMode.useItemOn(mc.player, InteractionHand.MAIN_HAND, hit);
         mc.player.swing(InteractionHand.MAIN_HAND);
 
@@ -720,7 +690,6 @@ public class IronAhRestocker extends Module {
         return mc.player.containerMenu instanceof ChestMenu menu ? menu : null;
     }
 
-    /** Left click a stack of ingots in the chest to take it onto the cursor. */
     private void tickGrabPickup() {
         ChestMenu menu = openChest();
 
@@ -735,7 +704,6 @@ public class IronAhRestocker extends Module {
         }
 
         if (firstEmptyPlayerSlot(menu) < 0) {
-            // inventory already full of singles
             state = State.CHEST_CLOSE;
             return;
         }
@@ -765,7 +733,6 @@ public class IronAhRestocker extends Module {
         state = State.GRAB_PLACE;
     }
 
-    /** Right click an empty slot to drop exactly one off the cursor, the vanilla way. */
     private void tickGrabPlace() {
         ChestMenu menu = openChest();
 
@@ -775,7 +742,6 @@ public class IronAhRestocker extends Module {
         }
 
         if (mc.player.containerMenu.getCarried().isEmpty()) {
-            // cursor ran dry, grab another stack if there is more to place
             state = firstEmptyPlayerSlot(menu) < 0 ? State.CHEST_CLOSE : State.GRAB_PICKUP;
             return;
         }
@@ -792,7 +758,6 @@ public class IronAhRestocker extends Module {
         delayCounter = jitter(clickDelay.get(), 1);
     }
 
-    /** Put whatever is left on the cursor back where it came from. */
     private void tickGrabReturn() {
         ChestMenu menu = openChest();
 
@@ -816,7 +781,6 @@ public class IronAhRestocker extends Module {
         delayCounter = jitter(screenDelay.get(), 1);
 
         if (grabbed <= 0 && !hasAnyItemInInventory()) {
-            // nothing to restock, do not come straight back and re-run the ah command
             endCycleBackoff();
             return;
         }
@@ -827,7 +791,6 @@ public class IronAhRestocker extends Module {
         state = State.SPREAD_OPEN;
     }
 
-    /** First empty player-inventory slot of the open chest menu, in menu indices. */
     private int firstEmptyPlayerSlot(ChestMenu menu) {
         int containerSlots = menu.getRowCount() * 9;
 
@@ -838,9 +801,6 @@ public class IronAhRestocker extends Module {
         return -1;
     }
 
-    // ---------------------------------------------------------------- listing
-
-    /** Opens the real inventory before splitting any stack. */
     private void tickSpreadOpen() {
         if (mc.player.containerMenu != mc.player.inventoryMenu) {
             closeAnyMenu();
@@ -857,7 +817,6 @@ public class IronAhRestocker extends Module {
         state = State.SPREAD_PICKUP;
     }
 
-    /** Picks up one multi-ingot stack. Singles are deliberately ignored. */
     private void tickSpreadPickup() {
         if (mc.player.containerMenu != mc.player.inventoryMenu || !(mc.screen instanceof InventoryScreen)) {
             state = State.SPREAD_OPEN;
@@ -875,8 +834,6 @@ public class IronAhRestocker extends Module {
             return;
         }
 
-        // Keep the source slot empty while spreading. If the stack does not fit completely, the
-        // remainder goes back here and is never exposed to /ah sell.
         spreadSourceSlot = source;
         mc.gameMode.handleContainerInput(mc.player.inventoryMenu.containerId,
             inventoryMenuSlot(source), 0, ContainerInput.PICKUP, mc.player);
@@ -884,7 +841,6 @@ public class IronAhRestocker extends Module {
         state = State.SPREAD_PLACE;
     }
 
-    /** Right-clicks one ingot into each empty inventory slot. */
     private void tickSpreadPlace() {
         if (mc.player.containerMenu != mc.player.inventoryMenu || !(mc.screen instanceof InventoryScreen)) {
             returnSpreadCursor();
@@ -910,7 +866,6 @@ public class IronAhRestocker extends Module {
         delayCounter = jitter(clickDelay.get(), 1);
     }
 
-    /** Returns the unsplit remainder to its original slot. */
     private void tickSpreadReturn() {
         if (mc.player.containerMenu != mc.player.inventoryMenu) {
             state = State.SPREAD_OPEN;
@@ -933,14 +888,11 @@ public class IronAhRestocker extends Module {
 
     private void tickSellSelect() {
         if (currentSlot > 8) {
-            // the hotbar is the only place /ah sell can reach, so top it back up from below
             if (hasSingleInMainInventory()) {
                 state = State.PULL_OPEN;
                 return;
             }
 
-            // Selling the singles creates room. Use it to spread the next part of any retained
-            // stack, then make another singles-only pass.
             if (hasStackedItemInInventory()) {
                 if (freeInventorySlots() > 0) {
                     state = State.SPREAD_OPEN;
@@ -971,8 +923,6 @@ public class IronAhRestocker extends Module {
     private void tickSellSend() {
         ItemStack stack = mc.player.getInventory().getItem(currentSlot);
 
-        // Last-line safety: a stack can never reach the command even if another state changes
-        // inventory contents between selection and send.
         if (stack.isEmpty() || !stack.is(item.get()) || stack.getCount() != 1) {
             currentSlot++;
             state = State.SELL_SELECT;
@@ -1031,9 +981,6 @@ public class IronAhRestocker extends Module {
         state = State.SELL_GAP;
     }
 
-    // ---------------------------------------------------------------- hotbar top-up
-
-    /** Opens the inventory for real before any slot gets clicked, same as InvSell does. */
     private void tickPullOpen() {
         if (mc.player.containerMenu != mc.player.inventoryMenu) {
             closeAnyMenu();
@@ -1051,7 +998,6 @@ public class IronAhRestocker extends Module {
         state = State.PULL;
     }
 
-    /** Swaps ingots up into the empty hotbar slots, one click at a time, screen open throughout. */
     private void tickPull() {
         if (mc.player.containerMenu != mc.player.inventoryMenu) {
             state = State.PULL_OPEN;
@@ -1059,7 +1005,6 @@ public class IronAhRestocker extends Module {
         }
 
         if (!(mc.screen instanceof InventoryScreen)) {
-            // something closed it under us, reopen rather than clicking into nothing
             state = State.PULL_OPEN;
             return;
         }
@@ -1164,7 +1109,6 @@ public class IronAhRestocker extends Module {
         return -1;
     }
 
-    /** Player inventory index to its slot in InventoryMenu. */
     private int inventoryMenuSlot(int inventorySlot) {
         if (inventorySlot >= 0 && inventorySlot <= 8) {
             return InventoryMenu.USE_ROW_SLOT_START + inventorySlot;
@@ -1173,7 +1117,6 @@ public class IronAhRestocker extends Module {
         return inventorySlot;
     }
 
-    /** Never close the inventory with the unsplit remainder still attached to the cursor. */
     private void returnSpreadCursor() {
         if (mc.player == null || mc.gameMode == null) return;
         if (mc.player.containerMenu != mc.player.inventoryMenu) return;
@@ -1188,8 +1131,6 @@ public class IronAhRestocker extends Module {
         if (target >= 0) {
             ItemStack destination = mc.player.getInventory().getItem(target);
 
-            // The original slot should be empty. Merging into the same item is also safe; never
-            // swap the remainder with an unrelated item while recovering from a screen close.
             if (destination.isEmpty() || destination.is(item.get())) {
                 mc.gameMode.handleContainerInput(mc.player.inventoryMenu.containerId,
                     inventoryMenuSlot(target), 0, ContainerInput.PICKUP, mc.player);
@@ -1199,9 +1140,6 @@ public class IronAhRestocker extends Module {
         spreadSourceSlot = -1;
     }
 
-    // ---------------------------------------------------------------- listing remover
-
-    /** Entry point for .removertest, runs the remover on its own and stops afterwards. */
     public void startRemoverTest() {
         removerTestOnly = true;
         pendingRemoval = false;
@@ -1222,7 +1160,6 @@ public class IronAhRestocker extends Module {
         state = State.REMOVE_OPEN_MINE;
     }
 
-    /** Click the chest in the ah menu, which is what opens your own listings. */
     private void tickRemoveOpenMine() {
         ChestMenu menu = openChest();
 
@@ -1259,7 +1196,6 @@ public class IronAhRestocker extends Module {
         state = State.REMOVE_MINE_WAIT;
     }
 
-    /** Wait for the server to swap the menu for your listings one. */
     private void tickRemoveMineWait() {
         ChestMenu menu = openChest();
 
@@ -1270,7 +1206,6 @@ public class IronAhRestocker extends Module {
         }
 
         if (++waited >= priceTimeout.get()) {
-            // some servers reuse the same window id, so try clicking anyway rather than giving up
             if (menu != null) {
                 waited = 0;
                 state = State.REMOVE_CLICK;
@@ -1282,7 +1217,6 @@ public class IronAhRestocker extends Module {
         }
     }
 
-    /** Click one listing per remove-delay until they are gone. */
     private void tickRemoveClick() {
         ChestMenu menu = openChest();
 
@@ -1315,7 +1249,6 @@ public class IronAhRestocker extends Module {
         ItemStack before = menu.getSlot(target).getItem().copy();
         mc.gameMode.handleContainerInput(menu.containerId, target, 0, ContainerInput.PICKUP, mc.player);
 
-        // the menu only updates when the server answers, so watch for the slot going stale
         if (ItemStack.matches(before, menu.getSlot(target).getItem())) {
             if (++stalledRemovals >= 6) {
                 if (notifications.get()) warning("Listings are not clearing, stopping the removal pass.");
@@ -1330,10 +1263,6 @@ public class IronAhRestocker extends Module {
         delayCounter = jitter(removeDelay.get(), 2);
     }
 
-    /**
-     * A listing went while we were reaching for it. Sit out a minute with the menu shut, then
-     * start the pass again from the /ah command rather than clicking into a stale menu.
-     */
     private void startRemoveRetry() {
         closeAnyMenu();
 
@@ -1350,7 +1279,6 @@ public class IronAhRestocker extends Module {
         delayCounter = jitter(goneRetryMinutes.get() * 60 * 20, 20 * 10);
         state = State.REMOVE_RETRY;
 
-        // worded so it matches neither gone-message nor limit-message, or the module answers itself
         if (notifications.get()) info("Pausing about %d minute(s), then trying the pickup again.", goneRetryMinutes.get());
     }
 
@@ -1379,14 +1307,10 @@ public class IronAhRestocker extends Module {
         state = State.REMOVE_CLOSE;
     }
 
-    // ---------------------------------------------------------------- shared
-
-    /** Normal end of a restock run. Straight back round after a short randomised gap. */
     private void endCycle(boolean failed) {
         lastCycleFailed = failed;
         cyclesSinceClear++;
 
-        // scheduled clearing. the limit message sets this flag too, from startLimitCooldown
         if (clearDue()) pendingRemoval = true;
 
         closeAnyMenu();
@@ -1394,10 +1318,6 @@ public class IronAhRestocker extends Module {
         state = State.COOLDOWN;
     }
 
-    /**
-     * Whether a clearing pass is due now. OnlyWhenFull never schedules one here, it waits for the
-     * server to say the ah is full, which is what sets pendingRemoval from startLimitCooldown.
-     */
     private boolean clearDue() {
         if (!removeListings.get()) return false;
 
@@ -1408,14 +1328,12 @@ public class IronAhRestocker extends Module {
         };
     }
 
-    /** Cycle that did no work. Longer, still randomised, so an empty chest does not spam commands. */
     private void endCycleBackoff() {
         closeAnyMenu();
         delayCounter = jitter(idleBackoff.get(), 40);
         state = State.COOLDOWN;
     }
 
-    /** The one thing that actually parks the module: the server saying we listed too much. */
     private void startLimitCooldown() {
         lastCycleFailed = true;
         pendingRemoval = true;
@@ -1423,7 +1341,6 @@ public class IronAhRestocker extends Module {
         delayCounter = jitter(cycleCooldownSeconds.get() * 20, 20 * 10);
         state = State.COOLDOWN;
 
-        // deliberately worded so it cannot match limit-message and re-enter the chat handler
         if (notifications.get()) info("Parking for about %d seconds.", cycleCooldownSeconds.get());
     }
 
@@ -1462,21 +1379,15 @@ public class IronAhRestocker extends Module {
     private void onChatMessage(ReceiveMessageEvent event) {
         if (!isActive()) return;
 
-        // already parked, nothing left for this message to trigger
         if (state == State.COOLDOWN) return;
 
-        // our own chat output comes straight back through this handler. without this guard the
-        // module answers itself, every reply spawning more replies, until the client drowns
         if (handlingMessage) return;
 
         String msg = event.getMessage().getString();
         if (msg == null || msg.isEmpty()) return;
 
-        // anything Meteor printed is client side, never the server talking
         if (msg.contains("[Meteor]")) return;
 
-        // a listing sold out from under the pickup. REMOVE_RETRY is left out on purpose: more of
-        // these arriving during the pause must not keep pushing the timer back
         if (inRemovalPickup() && matchesGoneMessage(msg)) {
             handlingMessage = true;
             try {
@@ -1497,13 +1408,11 @@ public class IronAhRestocker extends Module {
         }
     }
 
-    /** Only the states that actually click listings out of the ah listen for a gone message. */
     private boolean inRemovalPickup() {
         return state == State.REMOVE_SEND || state == State.REMOVE_OPEN_MINE
             || state == State.REMOVE_MINE_WAIT || state == State.REMOVE_CLICK;
     }
 
-    /** Matches "that was already bought" and its many wordings. */
     private boolean matchesGoneMessage(String msg) {
         try {
             return Pattern.compile(goneRegex.get(), Pattern.CASE_INSENSITIVE).matcher(msg).find();
@@ -1519,12 +1428,10 @@ public class IronAhRestocker extends Module {
         EveryNCycles
     }
 
-    /** Matches the limit warning in whatever wording the server uses. */
     private boolean matchesLimitMessage(String msg) {
         try {
             return Pattern.compile(limitRegex.get(), Pattern.CASE_INSENSITIVE).matcher(msg).find();
         } catch (Exception e) {
-            // a broken regex must not silently disable the one guard that matters
             String lower = msg.toLowerCase(Locale.ROOT);
             return lower.contains("too many") || lower.contains("limit");
         }

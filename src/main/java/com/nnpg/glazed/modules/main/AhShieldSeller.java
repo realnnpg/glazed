@@ -33,14 +33,6 @@ import java.util.Random;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-/**
- * Shield version of the ah restocker.
- *
- * Shields do not stack, so a slot is one shield and the whole inventory is one batch. Take a batch
- * out of the chest, read the cheapest listing, list the lot just under it, refill and repeat. When
- * a listing bounces back, or the server says there is no room left, it waits, pulls every unsold
- * shield back off the ah, and starts over.
- */
 public class AhShieldSeller extends Module {
     private final SettingGroup sgGeneral = settings.getDefaultGroup();
     private final SettingGroup sgPrice = settings.createGroup("Price lookup");
@@ -425,7 +417,6 @@ public class AhShieldSeller extends Module {
             case PULL -> tickPull();
             case PULL_CLOSE -> tickPullClose();
             case COLLECT_WAIT -> {
-                // the wait itself is just the delay, this runs once it expires
                 state = State.COLLECT_SEND;
             }
             case COLLECT_SEND -> tickCollectSend();
@@ -441,10 +432,7 @@ public class AhShieldSeller extends Module {
         }
     }
 
-    // ---------------------------------------------------------------- batch start
-
     private void tickIdle() {
-        // a scheduled clear is due. no wait here, nothing bounced, we are just tidying up
         if (pendingCollect) {
             pendingCollect = false;
 
@@ -484,8 +472,6 @@ public class AhShieldSeller extends Module {
 
         return null;
     }
-
-    // ---------------------------------------------------------------- chest grab
 
     private void tickChestOpen() {
         BlockPos target = lookedAtChest();
@@ -530,10 +516,6 @@ public class AhShieldSeller extends Module {
         return mc.player.containerMenu instanceof ChestMenu menu ? menu : null;
     }
 
-    /**
-     * Shift-clicks shields out of the chest one at a time. Shields do not stack, so one click is
-     * one shield and a full inventory is exactly one batch.
-     */
     private void tickGrab() {
         ChestMenu menu = openChest();
 
@@ -543,7 +525,6 @@ public class AhShieldSeller extends Module {
         }
 
         if (firstEmptyPlayerSlot(menu) < 0) {
-            // inventory is full, that is the batch
             state = State.CHEST_CLOSE;
             return;
         }
@@ -603,8 +584,6 @@ public class AhShieldSeller extends Module {
 
         return -1;
     }
-
-    // ---------------------------------------------------------------- price lookup
 
     private void tickPriceSend() {
         mc.getConnection().sendCommand(priceCommand.get().trim());
@@ -746,8 +725,6 @@ public class AhShieldSeller extends Module {
         return (long) value;
     }
 
-    // ---------------------------------------------------------------- listing
-
     private void tickSellSelect() {
         if (currentSlot > 8) {
             if (hasItemInMainInventory()) {
@@ -817,8 +794,6 @@ public class AhShieldSeller extends Module {
     }
 
     private void tickSellVerify() {
-        // the shield count is what matters, not the exact stack. a bounced shield can come back
-        // with different durability or a banner, so components are deliberately ignored here
         if (countInInventory() >= countBeforeSale) {
             if (notifications.get()) info("A shield came back, the ah is full. Waiting %d minute(s) before collecting.", collectWaitMinutes.get());
             startCollectRun();
@@ -829,8 +804,6 @@ public class AhShieldSeller extends Module {
         delayCounter = jitter(gapDelay.get(), 0);
         state = State.SELL_GAP;
     }
-
-    // ---------------------------------------------------------------- hotbar top-up
 
     private void tickPullOpen() {
         if (mc.player.containerMenu != mc.player.inventoryMenu) {
@@ -893,9 +866,6 @@ public class AhShieldSeller extends Module {
         state = State.SELL_SELECT;
     }
 
-    // ---------------------------------------------------------------- collect back
-
-    /** A bounce means the ah is full. Wait, then take every unsold shield back. */
     private void startCollectRun() {
         lastCycleFailed = true;
         closeAnyMenu();
@@ -904,7 +874,6 @@ public class AhShieldSeller extends Module {
         stalled = 0;
         goneRetries = 0;
 
-        // collecting switched off: still sit out the wait, then go again at a lower price
         if (!collectListings.get()) {
             delayCounter = jitter(collectWaitMinutes.get() * 60 * 20, 20 * 20);
             state = State.COOLDOWN;
@@ -915,10 +884,6 @@ public class AhShieldSeller extends Module {
         state = State.COLLECT_WAIT;
     }
 
-    /**
-     * Whether a collect run is due now. OnlyWhenFull never schedules one here, it waits for a
-     * shield to bounce back or for the server to say the ah is full.
-     */
     private boolean collectDue() {
         if (!collectListings.get()) return false;
 
@@ -938,7 +903,6 @@ public class AhShieldSeller extends Module {
         state = State.COLLECT_OPEN_MINE;
     }
 
-    /** Click the chest in the ah menu, which is what opens your own listings. */
     private void tickCollectOpenMine() {
         ChestMenu menu = openChest();
 
@@ -986,7 +950,6 @@ public class AhShieldSeller extends Module {
 
         if (++waited >= priceTimeout.get()) {
             if (menu != null) {
-                // some servers reuse the window id, try clicking anyway
                 waited = 0;
                 state = State.COLLECT_CLICK;
                 return;
@@ -1011,7 +974,6 @@ public class AhShieldSeller extends Module {
             return;
         }
 
-        // stop if there is nowhere to put them
         if (firstEmptyPlayerSlot(menu) < 0) {
             if (notifications.get()) info("Inventory is full, stopping the collect run at %d.", collected);
             state = State.COLLECT_CLOSE;
@@ -1050,10 +1012,6 @@ public class AhShieldSeller extends Module {
         delayCounter = jitter(collectDelay.get(), 2);
     }
 
-    /**
-     * A shield sold while we were reaching for it. Shut the menu, sit out a minute, then restart
-     * the run from the /ah command instead of clicking into a menu the server has moved on from.
-     */
     private void startCollectRetry() {
         closeAnyMenu();
 
@@ -1070,7 +1028,6 @@ public class AhShieldSeller extends Module {
         delayCounter = jitter(goneRetryMinutes.get() * 60 * 20, 20 * 10);
         state = State.COLLECT_RETRY;
 
-        // worded so it matches neither gone-message nor limit-message, or the module answers itself
         if (notifications.get()) info("Pausing about %d minute(s), then trying the pickup again.", goneRetryMinutes.get());
     }
 
@@ -1086,12 +1043,9 @@ public class AhShieldSeller extends Module {
 
         if (notifications.get()) info("Collected %d %s back, refilling.", collected, itemName());
 
-        // straight back to a fresh batch: top the inventory up from the chest and start again
         delayCounter = jitter(cycleGap.get(), 5);
         state = State.COOLDOWN;
     }
-
-    // ---------------------------------------------------------------- shared
 
     private void endBatch(boolean failed) {
         lastCycleFailed = failed;
@@ -1115,7 +1069,6 @@ public class AhShieldSeller extends Module {
         if (mc.screen != null) mc.setScreen(null);
     }
 
-    /** Counts by item type only. Shield durability and banner patterns must not split the count. */
     private int countInInventory() {
         int total = 0;
         int size = mc.player.getInventory().getContainerSize();
@@ -1163,15 +1116,12 @@ public class AhShieldSeller extends Module {
     private void onChatMessage(ReceiveMessageEvent event) {
         if (!isActive()) return;
 
-        // our own chat output comes back through this handler, so never react to it
         if (handlingMessage) return;
 
         String msg = event.getMessage().getString();
         if (msg == null || msg.isEmpty()) return;
         if (msg.contains("[Meteor]")) return;
 
-        // a shield sold out from under the pickup. COLLECT_RETRY is left out on purpose: more of
-        // these arriving during the pause must not keep pushing the timer back
         if (inCollectPickup() && matchesGoneMessage(msg)) {
             handlingMessage = true;
             try {
@@ -1182,7 +1132,6 @@ public class AhShieldSeller extends Module {
             return;
         }
 
-        // already heading for a collect run, nothing left to trigger
         if (inCollectRun()) return;
 
         if (!matchesLimitMessage(msg)) return;
@@ -1202,7 +1151,6 @@ public class AhShieldSeller extends Module {
         EveryNCycles
     }
 
-    /** Only the states that actually click shields out of the ah listen for a gone message. */
     private boolean inCollectPickup() {
         return state == State.COLLECT_SEND || state == State.COLLECT_OPEN_MINE
             || state == State.COLLECT_MINE_WAIT || state == State.COLLECT_CLICK;
@@ -1213,7 +1161,6 @@ public class AhShieldSeller extends Module {
             || state == State.COLLECT_CLOSE || inCollectPickup();
     }
 
-    /** Matches "that was already bought" and its many wordings. */
     private boolean matchesGoneMessage(String msg) {
         try {
             return Pattern.compile(goneRegex.get(), Pattern.CASE_INSENSITIVE).matcher(msg).find();

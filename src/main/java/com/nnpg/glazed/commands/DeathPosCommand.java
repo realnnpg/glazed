@@ -8,13 +8,6 @@ import net.minecraft.core.GlobalPos;
 
 import java.util.Optional;
 
-/**
- * Prints where the server says you last died.
- *
- * The client is told the last death location in the login and respawn packets, the same value a
- * recovery compass points at, so this works after the fact as long as you have not died again
- * since.
- */
 public class DeathPosCommand extends Command {
     public DeathPosCommand() {
         super("deathpos", "Prints the last death location the server sent you, and copies it.");

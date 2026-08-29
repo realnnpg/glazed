@@ -22,20 +22,11 @@ import java.util.List;
 import java.util.Random;
 import java.util.Set;
 
-/**
- * Leaves the server the moment another player loads in.
- *
- * A tripwire, not a state machine: every tick it walks the loaded players, and the first one that
- * is not you, not whitelisted and not filtered out gets you disconnected. Leaving turns the module
- * off so it does not fight you while you are in the menus, and unless you say otherwise it saves
- * itself as enabled anyway, so it is armed again the next time you launch the game.
- */
 public class AutoLeave extends Module {
     private final SettingGroup sgGeneral = settings.getDefaultGroup();
     private final SettingGroup sgFilter = settings.createGroup("Filter");
     private final SettingGroup sgArming = settings.createGroup("Arming");
 
-    // some freecam mods spawn a fake player under this name, same list PlayerDetection uses
     private static final Set<String> PERMANENT_WHITELIST = new HashSet<>(Arrays.asList(
         "FreeCamera"
     ));
@@ -235,7 +226,6 @@ public class AutoLeave extends Module {
         fuse = -1;
 
         if (mc.getConnection() == null) {
-            // nothing left to disconnect from, so do not sit here pretending to be armed
             warning("No connection to drop, turning off.");
             toggle();
             return;
@@ -250,7 +240,6 @@ public class AutoLeave extends Module {
     @EventHandler
     private void onGameLeft(GameLeftEvent event) {
         if (!disableOnLeave.get()) {
-            // still reset, or the next world starts with a stale fuse
             graceCounter = joinGrace.get();
             fuse = -1;
             leaving = false;
@@ -266,7 +255,6 @@ public class AutoLeave extends Module {
     @Override
     public CompoundTag toTag() {
         CompoundTag tag = super.toTag();
-        // leaving turns the module off, so without this it would come back disabled next launch
         if (tag != null && armOnStartup.get()) tag.putBoolean("active", true);
         return tag;
     }

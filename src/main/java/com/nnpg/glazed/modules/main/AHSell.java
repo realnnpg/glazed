@@ -111,8 +111,6 @@ public class AHSell extends Module {
             return;
         }
 
-        // the whole sequence is driven from onTick now. doing it here meant the first slot change
-        // and its /ah sell went out in the same tick, before the server was ever told the slot changed
         currentSlot = 0;
         sold = 0;
         waited = 0;
@@ -167,10 +165,6 @@ public class AHSell extends Module {
             return;
         }
 
-        // client-side only. the ServerboundSetCarriedItem packet is not flushed until
-        // MultiPlayerGameMode.tick(), which runs after TickEvent.Pre, so we have to yield at
-        // least one tick before the command or the server sells whatever slot it still thinks
-        // is held
         VersionUtil.setSelectedSlot(mc.player, currentSlot);
         delayCounter = slotDelay.get();
         state = State.SEND;
@@ -186,7 +180,6 @@ public class AHSell extends Module {
             return;
         }
 
-        // re-check: the stack can be gone if the last sale actually consumed this slot
         ItemStack stack = mc.player.getInventory().getItem(currentSlot);
         if (stack.isEmpty()) {
             currentSlot++;
@@ -205,7 +198,6 @@ public class AHSell extends Module {
     }
 
     private void tickAwaitConfirm() {
-        // server dialog with Yes / No buttons
         if (GlazedSell.isDialogOpen()) {
             if (GlazedSell.clickDialogYes()) {
                 sold++;
@@ -219,9 +211,6 @@ public class AHSell extends Module {
         AbstractContainerMenu screenHandler = mc.player.containerMenu;
 
         if (screenHandler instanceof ChestMenu handler && handler.getRowCount() == 3) {
-            // was a shift-right-click (QUICK_MOVE, button 1) on the confirm slot, which menu
-            // plugins generally ignore. clickConfirm does a plain left click (PICKUP, button 0)
-            // and hunts for the button instead of assuming slot 15
             if (GlazedSell.clickConfirm(handler)) {
                 sold++;
                 if (notifications.get()) info("Sold item in hotbar slot " + currentSlot + ".");
@@ -231,7 +220,6 @@ public class AHSell extends Module {
             }
         }
 
-        // no confirm screen showed up. dont claim a sale that never happened, just move on
         if (++waited >= confirmTimeout.get()) {
             if (notifications.get()) warning("No confirm screen for slot " + currentSlot + ", skipping.");
             GlazedSell.close();
@@ -244,7 +232,6 @@ public class AHSell extends Module {
     private void onChatMessage(ReceiveMessageEvent event) {
         String msg = event.getMessage().getString();
 
-        // never react to our own chat output, it re-enters this handler
         if (msg.contains("[Meteor]")) return;
 
         if (msg.contains("You have too many listed items.")) {

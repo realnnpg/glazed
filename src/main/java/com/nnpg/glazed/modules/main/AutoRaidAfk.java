@@ -33,15 +33,6 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Random;
 
-/**
- * Sits out a raid for you.
- *
- * It refuses to start unless a raid is actually running, then it left clicks on its own whenever
- * something is within reach. The clicks are plain left clicks on an unrandomised interval spread:
- * it never turns your head, never picks a target and never waits for a mob to line up, so what it
- * hits is whatever you were already pointing at. When the raid ends it drinks an ominous bottle out
- * of your hotbar to pull the next one, and if there is no bottle down there it says so and stops.
- */
 public class AutoRaidAfk extends Module {
     private final SettingGroup sgGeneral = settings.getDefaultGroup();
     private final SettingGroup sgClicking = settings.createGroup("Clicking");
@@ -268,7 +259,6 @@ public class AutoRaidAfk extends Module {
 
     @Override
     public void onDeactivate() {
-        // never leave the use key stuck down, or the game locked, whatever we were in the middle of
         releaseUse();
         releaseFreeze();
         state = State.WATCH;
@@ -379,7 +369,6 @@ public class AutoRaidAfk extends Module {
     }
 
     private void tickDrinkSwap() {
-        // give the slot change a couple of ticks to land before holding use
         drinkTicks++;
         if (drinkTicks < 3) return;
 
@@ -483,7 +472,6 @@ public class AutoRaidAfk extends Module {
         return false;
     }
 
-    /** True or false when the boss bars could be read, null when they could not. */
     private Boolean raidBarUp() {
         if (mc.gui == null) return null;
 
@@ -517,10 +505,6 @@ public class AutoRaidAfk extends Module {
         return read ? Boolean.FALSE : null;
     }
 
-    /**
-     * The boss bar map is private and its name is remapped at runtime, so it gets picked out by
-     * type instead of by name.
-     */
     private static List<Field> bossMapFields() {
         if (bossMapFields == null) {
             List<Field> found = new ArrayList<>();
@@ -552,13 +536,6 @@ public class AutoRaidAfk extends Module {
         nagCounter = 200;
     }
 
-    // ---------------------------------------------------------------- the freeze
-
-    /**
-     * Swallows every screen while the freeze is on. Meteor's own menu is deliberately let through,
-     * because with movement and Escape gone it is the only way left to turn this off, and the death
-     * and disconnect screens are let through because blocking either one strands you.
-     */
     @EventHandler
     private void onOpenScreen(OpenScreenEvent event) {
         if (!frozen) return;
@@ -574,10 +551,6 @@ public class AutoRaidAfk extends Module {
         event.setCancelled(true);
     }
 
-    /**
-     * Swaps the player's input for a bare ClientInput, whose tick() does nothing at all. That kills
-     * every movement key at the source instead of fighting them one at a time, every tick.
-     */
     private void applyFreeze() {
         if (!frozen) {
             lockYaw = mc.player.getYRot();
@@ -587,7 +560,6 @@ public class AutoRaidAfk extends Module {
             if (notifications.get()) info("Frozen. The Meteor menu still opens, turn this off to move again.");
         }
 
-        // respawning or changing dimension hands you a new player with a fresh input, so keep looking
         if (mc.player.input != blankInput) {
             blankInput = new ClientInput();
             mc.player.input = blankInput;
@@ -603,7 +575,6 @@ public class AutoRaidAfk extends Module {
         drainKeys();
     }
 
-    /** Hands back a fresh keyboard input rather than a stored one, since the player may have changed. */
     private void releaseFreeze() {
         if (!frozen) return;
 
@@ -614,7 +585,6 @@ public class AutoRaidAfk extends Module {
         if (notifications.get()) info("Unfrozen.");
     }
 
-    /** Presses queue up whether or not anything reads them, so empty the ones that would fire later. */
     private void drainKeys() {
         drain(mc.options.keyInventory);
         drain(mc.options.keyDrop);
@@ -627,7 +597,6 @@ public class AutoRaidAfk extends Module {
         for (KeyMapping slot : mc.options.keyHotbarSlots) drain(slot);
     }
 
-    /** Never call this on the use key. The bottle drink holds that one down on purpose. */
     private void drain(KeyMapping key) {
         while (key.consumeClick());
         key.setDown(false);

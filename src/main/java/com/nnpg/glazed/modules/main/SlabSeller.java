@@ -23,13 +23,6 @@ import net.minecraft.world.phys.HitResult;
 
 import java.util.Random;
 
-/**
- * Sells slabs through /sell instead of the auction house.
- *
- * One cycle: fill up out of the chest you are looking at, run /sell, shift the slabs into the
- * chest that opens, click the confirm pane, then go back for more. The confirm click sells but
- * leaves the menu open, so the module closes it itself once the chest has actually emptied.
- */
 public class SlabSeller extends Module {
     private final SettingGroup sgGeneral = settings.getDefaultGroup();
     private final SettingGroup sgSell = settings.createGroup("Sell menu");
@@ -240,13 +233,10 @@ public class SlabSeller extends Module {
         }
     }
 
-    // ---------------------------------------------------------------- cycle start
-
     private void tickIdle() {
         BlockPos target = lookedAtChest();
 
         if (requireChestLook.get() && target == null) {
-            // waiting, silently. looking away is how you pause this thing
             delayCounter = jitter(12, 4);
             return;
         }
@@ -258,7 +248,6 @@ public class SlabSeller extends Module {
         state = State.CHEST_OPEN;
     }
 
-    /** The chest the crosshair is on, or null. */
     private BlockPos lookedAtChest() {
         if (!(mc.hitResult instanceof BlockHitResult hit)) return null;
         if (hit.getType() != HitResult.Type.BLOCK) return null;
@@ -270,8 +259,6 @@ public class SlabSeller extends Module {
 
         return null;
     }
-
-    // ---------------------------------------------------------------- filling up
 
     private void tickChestOpen() {
         BlockPos target = lookedAtChest();
@@ -290,7 +277,6 @@ public class SlabSeller extends Module {
             return;
         }
 
-        // the same call a right click makes, swing included
         mc.gameMode.useItemOn(mc.player, InteractionHand.MAIN_HAND, hit);
         mc.player.swing(InteractionHand.MAIN_HAND);
 
@@ -317,7 +303,6 @@ public class SlabSeller extends Module {
         return mc.player.containerMenu instanceof ChestMenu menu ? menu : null;
     }
 
-    /** Shift-clicks slabs out of the chest until the inventory has no room left. */
     private void tickGrab() {
         ChestMenu menu = openChest();
 
@@ -327,7 +312,6 @@ public class SlabSeller extends Module {
         }
 
         if (firstEmptyPlayerSlot(menu) < 0) {
-            // inventory is full, that is the load
             state = State.CHEST_CLOSE;
             return;
         }
@@ -362,7 +346,6 @@ public class SlabSeller extends Module {
         delayCounter = jitter(screenDelay.get(), 1);
 
         if (countInInventory() <= 0) {
-            // nothing to sell, do not come straight back and re-run the command
             endCycleBackoff();
             return;
         }
@@ -371,9 +354,6 @@ public class SlabSeller extends Module {
         state = State.SELL_OPEN;
     }
 
-    // ---------------------------------------------------------------- the sell menu
-
-    /** Same entry point Auto Sell uses, so the command goes out exactly the way that one does. */
     private void tickSellOpen() {
         GlazedSell.openSell();
         filled = 0;
@@ -383,11 +363,6 @@ public class SlabSeller extends Module {
         state = State.SELL_WAIT;
     }
 
-    /**
-     * Any chest that opens after the source chest was shut is the sell menu. An earlier version
-     * insisted on finding a green pane first and rejected the real menu, which is why this now
-     * leans on GlazedSell rather than guessing at the layout.
-     */
     private void tickSellWait() {
         if (GlazedSell.container() != null) {
             stalled = 0;
@@ -401,7 +376,6 @@ public class SlabSeller extends Module {
         }
     }
 
-    /** Shift-clicks slabs in, top rows only. The bottom row is the buttons. */
     private void tickFill() {
         ChestMenu menu = GlazedSell.container();
 
@@ -411,7 +385,6 @@ public class SlabSeller extends Module {
             return;
         }
 
-        // usable area full: sell this load, the rest goes in the next one
         if (GlazedSell.firstEmptyUsableSlot(menu) < 0) {
             delayCounter = jitter(confirmDelay.get(), 1);
             state = State.CONFIRM;
@@ -456,12 +429,10 @@ public class SlabSeller extends Module {
         delayCounter = jitter(clickDelay.get(), 1);
     }
 
-    /** Clicks the confirm button if there is one. Closing sells anyway, so a miss is not fatal. */
     private void tickConfirm() {
         ChestMenu menu = GlazedSell.container();
 
         if (menu == null) {
-            // server shut it for us, which on this server is itself the sale
             finishLoad();
             return;
         }
@@ -480,17 +451,12 @@ public class SlabSeller extends Module {
         state = State.SELL_CLOSE;
     }
 
-    /** Closing is what actually banks the sale, the same thing pressing E does. */
     private void tickSellClose() {
         GlazedSell.close();
         if (mc.screen != null) mc.setScreen(null);
         finishLoad();
     }
 
-    /**
-     * One chestful is done. If the inventory still holds slabs, open the menu again for the next
-     * load rather than walking back to the chest with items still in hand.
-     */
     private void finishLoad() {
         int left = countInInventory();
         sold += filled;
@@ -512,9 +478,6 @@ public class SlabSeller extends Module {
         endCycle();
     }
 
-    // ---------------------------------------------------------------- helpers
-
-    /** First slab in the menu slot range [from, to). */
     private int findSlab(ChestMenu menu, int from, int to) {
         for (int slot = from; slot < to && slot < menu.slots.size(); slot++) {
             if (isSlab(menu.getSlot(slot).getItem())) return slot;
@@ -529,10 +492,6 @@ public class SlabSeller extends Module {
         return stack.getItem() instanceof BlockItem blockItem && blockItem.getBlock() instanceof SlabBlock;
     }
 
-    /**
-     * Confirm button, searched from the bottom right of the button row backwards. Restricting it
-     * to that last row means a slab in the deposit area can never be mistaken for a button.
-     */
     private int findButtonRowConfirm(ChestMenu menu) {
         int total = Math.min(GlazedSell.containerSlots(menu), menu.slots.size());
 
@@ -561,7 +520,6 @@ public class SlabSeller extends Module {
         return total;
     }
 
-    /** Fresh number per click, so emptying a chest has no fixed rhythm. */
     private int grabDelay() {
         int min = Math.max(1, grabDelayMin.get());
         int max = Math.max(min, grabDelayMax.get());
@@ -575,7 +533,6 @@ public class SlabSeller extends Module {
         state = State.COOLDOWN;
     }
 
-    /** Cycle that did no work. Longer, still randomised, so an empty chest does not spam commands. */
     private void endCycleBackoff() {
         closeAnyMenu();
         delayCounter = jitter(idleBackoff.get(), 40);
