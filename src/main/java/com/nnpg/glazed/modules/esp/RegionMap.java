@@ -373,6 +373,9 @@ public class RegionMap extends Module {
             CATEGORY_OVERRIDES.put(89, RegionCategory.GLITCHED);
             CATEGORY_OVERRIDES.put(90, RegionCategory.GLITCHED);
             CATEGORY_OVERRIDES.put(97, RegionCategory.GLITCHED);
+            CATEGORY_OVERRIDES.put(101, RegionCategory.GLITCHED);
+            CATEGORY_OVERRIDES.put(103, RegionCategory.GLITCHED);
+            CATEGORY_OVERRIDES.put(104, RegionCategory.GLITCHED);
 
             CATEGORY_OVERRIDES.put(4, RegionCategory.MEDIA_BALTOP);
             CATEGORY_OVERRIDES.put(5, RegionCategory.MEDIA_BALTOP);
