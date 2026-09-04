@@ -241,7 +241,7 @@ public class RTPer extends Module {
         .name("rtp-delay")
         .description("Delay between RTP attempts in seconds.")
         .defaultValue(15)
-        .min(11)
+        .min(1)
         .max(20)
         .sliderMin(11)
         .sliderMax(20)
