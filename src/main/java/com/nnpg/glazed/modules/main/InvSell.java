@@ -315,7 +315,7 @@ public class InvSell extends Module {
             return;
         }
 
-        mc.setScreen(new InventoryScreen(mc.player));
+        mc.gui.setScreen(new InventoryScreen(mc.player));
         delayCounter = jitter(screenDelay.get(), 1);
         state = State.REFILL;
     }
@@ -433,11 +433,11 @@ public class InvSell extends Module {
     }
 
     private boolean isInventoryScreenOpen() {
-        return mc.screen instanceof InventoryScreen;
+        return mc.gui.screen() instanceof InventoryScreen;
     }
 
     private void closeInventoryScreen() {
-        if (mc.screen instanceof InventoryScreen screen) screen.onClose();
+        if (mc.gui.screen() instanceof InventoryScreen screen) screen.onClose();
     }
 
     private void finish() {

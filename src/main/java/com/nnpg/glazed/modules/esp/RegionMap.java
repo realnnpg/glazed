@@ -9,9 +9,12 @@ import meteordevelopment.meteorclient.renderer.Renderer2D;
 import meteordevelopment.meteorclient.renderer.text.TextRenderer;
 import meteordevelopment.meteorclient.settings.*;
 import meteordevelopment.meteorclient.systems.modules.Module;
+import meteordevelopment.meteorclient.systems.modules.misc.Notifier.Event;
 import meteordevelopment.meteorclient.utils.render.color.Color;
 import meteordevelopment.meteorclient.utils.render.color.SettingColor;
 import meteordevelopment.orbit.EventHandler;
+import net.minecraft.client.gui.Gui;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.world.phys.Vec3;
 import java.util.HashMap;
 import java.util.Map;
@@ -120,7 +123,7 @@ public class RegionMap extends Module {
     }
 
     @EventHandler
-    private void onRender2D(Render2DEvent event) {
+    private void onRender2D(Render2DEvent event, GuiGraphicsExtractor graphics) {
         if (!isValidRenderState()) return;
 
         try {
@@ -137,7 +140,7 @@ public class RegionMap extends Module {
                 regionRenderer.renderGridLines(ctx, gridLineColor.get());
             }
 
-            regionRenderer.renderRegionNumbers(ctx, mapData, labelTextSize.get());
+            regionRenderer.renderRegionNumbers(ctx, mapData, labelTextSize.get(), graphics);
 
             if (enablePlayerIndicator.get()) {
                 playerTracker.renderPlayerPosition(ctx, playerPos,
@@ -145,11 +148,11 @@ public class RegionMap extends Module {
             }
 
             if (enableCoordinates.get()) {
-                renderPlayerInfo(ctx, playerPos);
+                renderPlayerInfo(ctx, playerPos, graphics);
             }
 
             if (enableRegionLabels.get()) {
-                renderRegionLegend(ctx);
+                renderRegionLegend(ctx, graphics);
             }
         } catch (Exception e) {
             LOG.error("Unhandled error in " + getClass().getSimpleName(), e);
@@ -160,7 +163,7 @@ public class RegionMap extends Module {
         return mc != null && mc.player != null && mc.level != null;
     }
 
-    private void renderPlayerInfo(MapRenderContext ctx, Vec3 pos) {
+    private void renderPlayerInfo(MapRenderContext ctx, Vec3 pos, GuiGraphicsExtractor graphics) {
         if (pos == null || ctx == null) return;
 
         try {
@@ -169,7 +172,7 @@ public class RegionMap extends Module {
             TextRenderer textRenderer = TextRenderer.get();
             if (textRenderer == null) return;
 
-            textRenderer.begin(1.0, false, true);
+            textRenderer.begin(graphics, 1.0, false, true);
 
             String coordsText = String.format("Position: X: %d, Z: %d", (int)pos.x, (int)pos.z);
             textRenderer.render(coordsText, ctx.mapX, infoY, Color.WHITE, false);
@@ -187,7 +190,7 @@ public class RegionMap extends Module {
         }
     }
 
-    private void renderRegionLegend(MapRenderContext ctx) {
+    private void renderRegionLegend(MapRenderContext ctx, GuiGraphicsExtractor graphics) {
         if (ctx == null) return;
 
         try {
@@ -209,7 +212,7 @@ public class RegionMap extends Module {
             TextRenderer textRenderer = TextRenderer.get();
             if (textRenderer == null) return;
 
-            textRenderer.begin(1.0, false, true);
+            textRenderer.begin(graphics, 1.0, false, true);
             for (int i = 0; i < regionTypes.length; i++) {
                 int legendY = legendStartY + i * 16 + 3;
                 textRenderer.render(regionTypes[i], ctx.mapX + 18, legendY, Color.WHITE, false);
@@ -460,14 +463,14 @@ public class RegionMap extends Module {
             }
         }
 
-        void renderRegionNumbers(MapRenderContext ctx, MapDataManager dataManager, double textScale) {
+        void renderRegionNumbers(MapRenderContext ctx, MapDataManager dataManager, double textScale, GuiGraphicsExtractor graphics) {
             if (ctx == null || dataManager == null) return;
 
             try {
                 TextRenderer textRenderer = TextRenderer.get();
                 if (textRenderer == null) return;
 
-                textRenderer.begin(textScale, false, true);
+                textRenderer.begin(graphics, textScale, false, true);
 
                 int mapSize = dataManager.getMapSize();
                 for (int row = 0; row < mapSize; row++) {

@@ -2806,7 +2806,7 @@ public class PremiumTunnelBaseFinder extends Module {
             try {
                 Screenshot.grab(
                     mc.gameDirectory,
-                    mc.getMainRenderTarget(),
+                    mc.gameRenderer.mainRenderTarget(),
                     (text) -> {
                         try {
                             File screenshotsDir = new File(mc.gameDirectory, "screenshots");

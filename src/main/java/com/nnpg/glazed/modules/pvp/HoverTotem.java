@@ -72,7 +72,7 @@ public class HoverTotem extends Module {
         if (!autoInvOpen.get() || mc.player == null || mc.level == null) return;
         if (!(event.packet instanceof ClientboundEntityEventPacket packet)) return;
         if (packet.getEventId() != 35 || packet.getEntity(mc.level) != mc.player) return;
-        if (mc.screen != null || !hasTotemInInventory()) return;
+        if (mc.gui.screen() != null || !hasTotemInInventory()) return;
 
         shouldOpenInv = true;
         totemEquipped = false;
@@ -83,18 +83,18 @@ public class HoverTotem extends Module {
     private void onTick(TickEvent.Pre event) {
         if (mc.player == null || mc.gameMode == null) return;
 
-        if (autoInvOpen.get() && mc.screen == null
+        if (autoInvOpen.get() && mc.gui.screen() == null
             && !mc.player.getOffhandItem().is(Items.TOTEM_OF_UNDYING)
             && hasTotemInInventory()) {
             shouldOpenInv = true;
         }
 
-        if (shouldOpenInv && mc.screen == null) {
+        if (shouldOpenInv && mc.gui.screen() == null) {
             if (hasTotemInInventory()) {
                 mc.execute(() -> {
                     if (mc.player == null) return;
 
-                    mc.setScreen(new InventoryScreen(mc.player));
+                    mc.gui.setScreen(new InventoryScreen(mc.player));
                     shouldOpenInv = false;
                     totemEquipped = false;
                     wasAutoOpened = true;
@@ -106,7 +106,7 @@ public class HoverTotem extends Module {
             return;
         }
 
-        Screen currentScreen = mc.screen;
+        Screen currentScreen = mc.gui.screen();
         if (!(currentScreen instanceof InventoryScreen inventoryScreen)) {
             if (wasAutoOpened && !totemEquipped && mc.player.getOffhandItem().is(Items.TOTEM_OF_UNDYING)) {
                 totemEquipped = true;

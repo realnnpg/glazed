@@ -80,7 +80,7 @@ public class OrderDropper extends Module {
 
             case WAIT_ORDERS_GUI -> {
                 if (now - stageStart < delay.get()) return;
-                if (mc.screen instanceof ContainerScreen) {
+                if (mc.gui.screen() instanceof ContainerScreen) {
                     stage = Stage.CLICK_SLOT_51;
                     stageStart = now;
                 } else if (now - stageStart > 3000) {
@@ -91,7 +91,7 @@ public class OrderDropper extends Module {
 
             case CLICK_SLOT_51 -> {
                 if (now - stageStart < delay.get()) return;
-                if (!(mc.screen instanceof ContainerScreen screen)) return;
+                if (!(mc.gui.screen() instanceof ContainerScreen screen)) return;
                 AbstractContainerMenu handler = screen.getMenu();
                 if (handler.slots.size() > 51) {
                     mc.gameMode.handleContainerInput(handler.containerId, 51, 0, ContainerInput.PICKUP, mc.player);
@@ -102,7 +102,7 @@ public class OrderDropper extends Module {
 
             case WAIT_SECOND_GUI -> {
                 if (now - stageStart < delay.get()) return;
-                if (mc.screen instanceof ContainerScreen) {
+                if (mc.gui.screen() instanceof ContainerScreen) {
                     stage = Stage.CLICK_TARGET_ITEM;
                     stageStart = now;
                 } else if (now - stageStart > 3000) {
@@ -113,7 +113,7 @@ public class OrderDropper extends Module {
 
             case CLICK_TARGET_ITEM -> {
                 if (now - stageStart < delay.get()) return;
-                if (!(mc.screen instanceof ContainerScreen screen)) return;
+                if (!(mc.gui.screen() instanceof ContainerScreen screen)) return;
                 if (targetItem.get() == null) {
                     error("Target item is null.");
                     toggle();
@@ -139,7 +139,7 @@ public class OrderDropper extends Module {
 
             case WAIT_THIRD_GUI -> {
                 if (now - stageStart < delay.get()) return;
-                if (mc.screen instanceof ContainerScreen) {
+                if (mc.gui.screen() instanceof ContainerScreen) {
                     stage = Stage.CLICK_SLOT_13;
                     stageStart = now;
                 } else if (now - stageStart > 3000) {
@@ -150,7 +150,7 @@ public class OrderDropper extends Module {
 
             case CLICK_SLOT_13 -> {
                 if (now - stageStart < delay.get()) return;
-                if (!(mc.screen instanceof ContainerScreen screen)) return;
+                if (!(mc.gui.screen() instanceof ContainerScreen screen)) return;
                 AbstractContainerMenu handler = screen.getMenu();
 
                 if (handler.slots.size() > 13) {
@@ -167,7 +167,7 @@ public class OrderDropper extends Module {
 
             case WAIT_ITEMS_GUI -> {
                 if (now - stageStart < delay.get()) return;
-                if (mc.screen instanceof ContainerScreen) {
+                if (mc.gui.screen() instanceof ContainerScreen) {
                     stage = Stage.CLICK_SLOT_52;
                     stageStart = now;
                 } else if (now - stageStart > 3000) {
@@ -178,7 +178,7 @@ public class OrderDropper extends Module {
 
             case CLICK_SLOT_52 -> {
                 if (now - stageStart < delay.get()) return;
-                if (!(mc.screen instanceof ContainerScreen screen)) return;
+                if (!(mc.gui.screen() instanceof ContainerScreen screen)) return;
                 AbstractContainerMenu handler = screen.getMenu();
                 if (handler.slots.size() > 52) {
                     mc.gameMode.handleContainerInput(handler.containerId, 52, 0, ContainerInput.PICKUP, mc.player);
@@ -189,7 +189,7 @@ public class OrderDropper extends Module {
 
             case CLICK_SLOT_53 -> {
                 if (now - stageStart < delay.get()) return;
-                if (!(mc.screen instanceof ContainerScreen screen)) {
+                if (!(mc.gui.screen() instanceof ContainerScreen screen)) {
                     toggle();
                     return;
                 }

@@ -808,8 +808,8 @@ public class IronAhRestocker extends Module {
             return;
         }
 
-        if (!(mc.screen instanceof InventoryScreen)) {
-            mc.setScreen(new InventoryScreen(mc.player));
+        if (!(mc.gui.screen() instanceof InventoryScreen)) {
+            mc.gui.setScreen(new InventoryScreen(mc.player));
             delayCounter = jitter(screenDelay.get(), 1);
         }
 
@@ -818,7 +818,7 @@ public class IronAhRestocker extends Module {
     }
 
     private void tickSpreadPickup() {
-        if (mc.player.containerMenu != mc.player.inventoryMenu || !(mc.screen instanceof InventoryScreen)) {
+        if (mc.player.containerMenu != mc.player.inventoryMenu || !(mc.gui.screen() instanceof InventoryScreen)) {
             state = State.SPREAD_OPEN;
             return;
         }
@@ -842,7 +842,7 @@ public class IronAhRestocker extends Module {
     }
 
     private void tickSpreadPlace() {
-        if (mc.player.containerMenu != mc.player.inventoryMenu || !(mc.screen instanceof InventoryScreen)) {
+        if (mc.player.containerMenu != mc.player.inventoryMenu || !(mc.gui.screen() instanceof InventoryScreen)) {
             returnSpreadCursor();
             state = State.SPREAD_OPEN;
             return;
@@ -879,7 +879,7 @@ public class IronAhRestocker extends Module {
 
     private void tickSpreadClose() {
         returnSpreadCursor();
-        if (mc.screen instanceof InventoryScreen screen) screen.onClose();
+        if (mc.gui.screen() instanceof InventoryScreen screen) screen.onClose();
 
         currentSlot = 0;
         delayCounter = jitter(screenDelay.get(), 1);
@@ -988,12 +988,12 @@ public class IronAhRestocker extends Module {
             return;
         }
 
-        if (mc.screen instanceof InventoryScreen) {
+        if (mc.gui.screen() instanceof InventoryScreen) {
             state = State.PULL;
             return;
         }
 
-        mc.setScreen(new InventoryScreen(mc.player));
+        mc.gui.setScreen(new InventoryScreen(mc.player));
         delayCounter = jitter(screenDelay.get(), 1);
         state = State.PULL;
     }
@@ -1004,7 +1004,7 @@ public class IronAhRestocker extends Module {
             return;
         }
 
-        if (!(mc.screen instanceof InventoryScreen)) {
+        if (!(mc.gui.screen() instanceof InventoryScreen)) {
             state = State.PULL_OPEN;
             return;
         }
@@ -1035,7 +1035,7 @@ public class IronAhRestocker extends Module {
     }
 
     private void tickPullClose() {
-        if (mc.screen instanceof InventoryScreen screen) screen.onClose();
+        if (mc.gui.screen() instanceof InventoryScreen screen) screen.onClose();
 
         stalledPulls = 0;
         currentSlot = 0;
@@ -1346,7 +1346,7 @@ public class IronAhRestocker extends Module {
 
     private void closeAnyMenu() {
         if (mc.player != null && mc.player.containerMenu != mc.player.inventoryMenu) mc.player.closeContainer();
-        if (mc.screen != null) mc.setScreen(null);
+        if (mc.gui.screen() != null) mc.gui.setScreen(null);
     }
 
     private int countMatching(ItemStack ref) {

@@ -10,6 +10,8 @@ import meteordevelopment.meteorclient.systems.modules.Module;
 import meteordevelopment.orbit.EventHandler;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.EntityTypes;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -112,11 +114,11 @@ public class AntiTrap extends Module {
 
         EntityType<?> type = entity.getType();
 
-        if (armorStands.get() && type == EntityType.ARMOR_STAND) {
+        if (armorStands.get() && type == EntityTypes.ARMOR_STAND) {
             return true;
         }
 
-        if (chestMinecarts.get() && type == EntityType.CHEST_MINECART) {
+        if (chestMinecarts.get() && type == EntityTypes.CHEST_MINECART) {
             return true;
         }
 

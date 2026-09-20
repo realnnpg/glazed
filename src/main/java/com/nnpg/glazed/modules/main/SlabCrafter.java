@@ -8,6 +8,7 @@ import meteordevelopment.meteorclient.systems.modules.Module;
 import meteordevelopment.meteorclient.utils.player.ChatUtils;
 import meteordevelopment.orbit.EventHandler;
 import net.minecraft.core.BlockPos;
+import net.minecraft.tags.BlockItemTags;
 import net.minecraft.tags.ItemTags;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.inventory.ChestMenu;
@@ -1256,7 +1257,7 @@ public class SlabCrafter extends Module {
     }
 
     private boolean isSlab(ItemStack stack) {
-        return !stack.isEmpty() && stack.is(ItemTags.SLABS);
+        return !stack.isEmpty() && stack.is(BlockItemTags.SLABS.item());
     }
 
     private int countInInventory(java.util.function.Predicate<ItemStack> test) {
@@ -1311,7 +1312,7 @@ public class SlabCrafter extends Module {
 
     private void closeAnyMenu() {
         if (mc.player != null && mc.player.containerMenu != mc.player.inventoryMenu) mc.player.closeContainer();
-        if (mc.screen != null) mc.setScreen(null);
+        if (mc.gui.screen() != null) mc.gui.setScreen(null);
     }
 
     private int jitter(int ticks, int floor) {

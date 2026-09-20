@@ -174,10 +174,10 @@ public class PlayerDetection extends Module {
 
         switch (notificationMode.get()) {
             case Chat -> { if (notifications.get()) info("Player(s) detected: (highlight)%s", playerList); }
-            case Toast -> mc.getToastManager().addToast(new MeteorToast.Builder(title).text("Player Detected!").icon(Items.PLAYER_HEAD).build());
+            case Toast -> mc.gui.toastManager().addToast(new MeteorToast.Builder(title).text("Player Detected!").icon(Items.PLAYER_HEAD).build());
             case Both -> {
                 if (notifications.get()) info("Player(s) detected: (highlight)%s", playerList);
-                mc.getToastManager().addToast(new MeteorToast.Builder(title).text("Player Detected!").icon(Items.PLAYER_HEAD).build());
+                mc.gui.toastManager().addToast(new MeteorToast.Builder(title).text("Player Detected!").icon(Items.PLAYER_HEAD).build());
             }
         }
 

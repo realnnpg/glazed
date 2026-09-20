@@ -5,6 +5,8 @@ import meteordevelopment.meteorclient.systems.modules.Module;
 import meteordevelopment.orbit.EventHandler;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.protocol.game.ServerboundUseItemOnPacket;
+import net.minecraft.tags.BlockTags;
+import net.minecraft.tags.ItemTags;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.Block;
@@ -44,24 +46,7 @@ public class NoBlockInteract extends Module {
         Blocks.FLETCHING_TABLE,
         Blocks.CHISELED_BOOKSHELF,
         Blocks.DECORATED_POT,
-        Blocks.CRAFTER,
-        Blocks.SHULKER_BOX,
-        Blocks.WHITE_SHULKER_BOX,
-        Blocks.ORANGE_SHULKER_BOX,
-        Blocks.MAGENTA_SHULKER_BOX,
-        Blocks.LIGHT_BLUE_SHULKER_BOX,
-        Blocks.YELLOW_SHULKER_BOX,
-        Blocks.LIME_SHULKER_BOX,
-        Blocks.PINK_SHULKER_BOX,
-        Blocks.GRAY_SHULKER_BOX,
-        Blocks.LIGHT_GRAY_SHULKER_BOX,
-        Blocks.CYAN_SHULKER_BOX,
-        Blocks.PURPLE_SHULKER_BOX,
-        Blocks.BLUE_SHULKER_BOX,
-        Blocks.BROWN_SHULKER_BOX,
-        Blocks.GREEN_SHULKER_BOX,
-        Blocks.RED_SHULKER_BOX,
-        Blocks.BLACK_SHULKER_BOX
+        Blocks.CRAFTER
     );
 
     @EventHandler
@@ -72,7 +57,7 @@ public class NoBlockInteract extends Module {
             BlockPos pos = packet.getHitResult().getBlockPos();
             Block block = mc.level.getBlockState(pos).getBlock();
 
-            if (!blockedBlocks.contains(block)) return;
+            if (!blockedBlocks.contains(block) || block.defaultBlockState().is(BlockTags.SHULKER_BOXES)) return;
 
             if (mc.player.getMainHandItem().getItem() == Items.ENDER_PEARL) {
                 event.cancel();

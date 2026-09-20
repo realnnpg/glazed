@@ -208,12 +208,12 @@ public class AdvancedStashFinder extends Module {
                     case Chat -> info("Found %s at (highlight)%s(default), (highlight)%s(default). %s", stashType, chunk.x, chunk.z, detectionReason);
                     case Toast -> {
                         MeteorToast toast = new MeteorToast.Builder(title).text("Found " + stashType.substring(0, 1).toUpperCase() + stashType.substring(1) + "!").icon(Items.CHEST).build();
-                        mc.getToastManager().addToast(toast);
+                        mc.gui.toastManager().addToast(toast);
                     }
                     case Both -> {
                         info("Found %s at (highlight)%s(default), (highlight)%s(default). %s", stashType, chunk.x, chunk.z, detectionReason);
                         MeteorToast toast = new MeteorToast.Builder(title).text("Found " + stashType.substring(0, 1).toUpperCase() + stashType.substring(1) + "!").icon(Items.CHEST).build();
-                        mc.getToastManager().addToast(toast);
+                        mc.gui.toastManager().addToast(toast);
                     }
                 }
             }
@@ -299,7 +299,7 @@ public class AdvancedStashFinder extends Module {
             table.add(theme.label("Total: " + chunk.getTotal()));
 
             WButton open = table.add(theme.button("Open")).widget();
-            open.action = () -> mc.setScreen(new ChunkScreen(theme, chunk));
+            open.action = () -> mc.gui.setScreen(new ChunkScreen(theme, chunk));
 
             WButton gotoBtn = table.add(theme.button("Goto")).widget();
             gotoBtn.action = () -> PathManagers.get().moveTo(new BlockPos(chunk.x, 0, chunk.z), true);

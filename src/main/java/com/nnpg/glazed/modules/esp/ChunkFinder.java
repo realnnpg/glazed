@@ -29,6 +29,7 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.LightLayer;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.WeatheringCopper.WeatherState;
 import net.minecraft.world.level.block.entity.BeehiveBlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.ChestBlockEntity;
@@ -639,8 +640,8 @@ public class ChunkFinder extends Module {
             || block == Blocks.DEEPSLATE_TILES
             || block == Blocks.CHISELED_DEEPSLATE
             || block == Blocks.END_STONE
-            || block == Blocks.WAXED_COPPER_BLOCK
-            || block == Blocks.WAXED_OXIDIZED_COPPER
+            || block == Blocks.COPPER_BLOCK.waxed().pick(WeatherState.UNAFFECTED)
+            || block == Blocks.COPPER_BLOCK.waxed().pick(WeatherState.WEATHERED)
             || block == Blocks.TUFF_BRICKS
             || block == Blocks.REPEATER
             || block == Blocks.AMETHYST_BLOCK
@@ -1285,7 +1286,7 @@ public class ChunkFinder extends Module {
     }
 
     private static boolean isTrialChamberBlock(BlockState state) {
-        return state.is(Blocks.WAXED_COPPER_BLOCK) || state.is(Blocks.WAXED_OXIDIZED_COPPER) || state.is(Blocks.TUFF_BRICKS);
+        return state.is(Blocks.COPPER_BLOCK.waxed().pick(WeatherState.UNAFFECTED)) || state.is(Blocks.COPPER_BLOCK.waxed().pick(WeatherState.OXIDIZED)) || state.is(Blocks.TUFF_BRICKS);
     }
 
     private int scoreBaseSignals(ChunkAnalysis a, List<String> tags) {
@@ -1474,7 +1475,7 @@ public class ChunkFinder extends Module {
             }
 
             if (mode == Mode.Toast || mode == Mode.Both) {
-                mc.getToastManager().addToast(new MeteorToast.Builder("ChunkFinder").text(message).icon(Items.CHEST).build());
+                mc.gui.toastManager().addToast(new MeteorToast.Builder("ChunkFinder").text(message).icon(Items.CHEST).build());
             }
 
             if (playSound.get()) {

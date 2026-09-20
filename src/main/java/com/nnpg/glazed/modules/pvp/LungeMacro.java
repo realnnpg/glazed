@@ -115,12 +115,12 @@ public class LungeMacro extends Module {
         }
 
         if (!swapping) {
-            boolean down = mc.screen == null && trigger.get().isSet() && trigger.get().isPressed();
+            boolean down = mc.gui.screen() == null && trigger.get().isSet() && trigger.get().isPressed();
             boolean pressed = down && !triggerWasDown;
             triggerWasDown = down;
 
             boolean auto = continuous.get()
-                && mc.screen == null
+                && mc.gui.screen() == null
                 && System.currentTimeMillis() - lastLunge >= continuousDelay.get()
                 && mc.player.getAttackStrengthScale(0.0f) >= 1.0f;
 
