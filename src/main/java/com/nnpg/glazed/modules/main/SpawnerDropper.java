@@ -139,7 +139,7 @@ public class SpawnerDropper extends Module {
             return;
         }
 
-        if (!(mc.screen instanceof AbstractContainerScreen)) {
+        if (!(mc.gui.screen() instanceof AbstractContainerScreen)) {
             if (reopenTimer >= reopenIntervalTicks || reopenTimer == 20) {
                 if (spawnerPos != null) {
                     openSpawner();
@@ -149,12 +149,12 @@ public class SpawnerDropper extends Module {
             return;
         }
 
-        AbstractContainerScreen<?> screen = (AbstractContainerScreen<?>) mc.screen;
+        AbstractContainerScreen<?> screen = (AbstractContainerScreen<?>) mc.gui.screen();
 
         // arrows found, close and wait for interval sigma
         if (boneOnly.get() && hasArrowsInInventory(screen)) {
             if (notifications.get()) info("Arrows detected - closing spawner and waiting for interval.");
-            mc.screen.onClose();
+            mc.gui.screen().onClose();
             waitingForInterval = true;
             reopenTimer = 0;
             return;
@@ -165,7 +165,7 @@ public class SpawnerDropper extends Module {
             if (checkDelayCounter >= CHECK_DELAY) {
                 if (screen.getMenu().getSlot(0).getItem().isEmpty()) {
                     if (notifications.get()) info("All bones dropped - closing and waiting for interval.");
-                    mc.screen.onClose();
+                    mc.gui.screen().onClose();
                     waitingForInterval = true;
                     reopenTimer = 0;
                     return;
@@ -228,8 +228,8 @@ public class SpawnerDropper extends Module {
         reopenTimer = 0;
         spawnerPos = null;
         waitingForInterval = false;
-        if (mc.screen != null) {
-            mc.setScreen(null);
+        if (mc.gui.screen() != null) {
+            mc.gui.setScreen(null);
         }
     }
 }

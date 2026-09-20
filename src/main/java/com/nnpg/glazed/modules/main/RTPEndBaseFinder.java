@@ -284,13 +284,13 @@ public class RTPEndBaseFinder extends Module {
                         stashType, chunk.x, chunk.z, detectionReason);
                     case Toast -> {
                         MeteorToast toast = new MeteorToast.Builder(title).text("Found " + stashType.substring(0, 1).toUpperCase() + stashType.substring(1) + "!").icon(Items.ENDER_CHEST).build();
-                        mc.getToastManager().addToast(toast);
+                        mc.gui.toastManager().addToast(toast);
                     }
                     case Both -> {
                         info("Found %s at (highlight)%s(default), (highlight)%s(default). %s",
                             stashType, chunk.x, chunk.z, detectionReason);
                         MeteorToast toast = new MeteorToast.Builder(title).text("Found " + stashType.substring(0, 1).toUpperCase() + stashType.substring(1) + "!").icon(Items.ENDER_CHEST).build();
-                        mc.getToastManager().addToast(toast);
+                        mc.gui.toastManager().addToast(toast);
                     }
                 }
             }

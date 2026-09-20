@@ -479,7 +479,7 @@ public class ChestSeller extends Module {
 
     private void closeMenu() {
         if (mc.player != null && mc.player.containerMenu != mc.player.inventoryMenu) mc.player.closeContainer();
-        if (mc.screen != null) mc.setScreen(null);
+        if (mc.gui.screen() != null) mc.gui.setScreen(null);
     }
 
     private int humanClickDelay(Setting<RandomBetweenInt> range) {

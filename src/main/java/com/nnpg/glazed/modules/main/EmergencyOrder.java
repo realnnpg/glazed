@@ -14,6 +14,8 @@ import meteordevelopment.meteorclient.utils.player.ChatUtils;
 import meteordevelopment.meteorclient.utils.player.InvUtils;
 import meteordevelopment.orbit.EventHandler;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.references.ItemIds;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.ContainerInput;
@@ -145,7 +147,7 @@ public class EmergencyOrder extends Module {
 
     @Override
     public void onDeactivate() {
-        if (mc.player != null && mc.screen != null) mc.player.closeContainer();
+        if (mc.player != null && mc.gui.screen() != null) mc.player.closeContainer();
         clear();
     }
 
@@ -219,7 +221,7 @@ public class EmergencyOrder extends Module {
         }
 
         // oof
-        if (!(mc.screen instanceof AbstractContainerScreen<?> screen)) {
+        if (!(mc.gui.screen() instanceof AbstractContainerScreen<?> screen)) {
             if (step == Step.CLOSE_DELIVERY) {
                 step = Step.CONFIRM;
                 waitTicks = guiDelay.get();
@@ -387,10 +389,10 @@ public class EmergencyOrder extends Module {
             ItemStack stack = slot.getItem();
             if (stack.isEmpty()) continue;
 
-            if (stack.is(Items.LIME_STAINED_GLASS_PANE)) return slot.index;
+            if (stack.is(Items.STAINED_GLASS_PANE.lime())) return slot.index;
             if (fallback != -1) continue;
 
-            if (stack.is(Items.GREEN_STAINED_GLASS_PANE)) {
+            if (stack.is(Items.STAINED_GLASS_PANE.green())) {
                 fallback = slot.index;
                 continue;
             }

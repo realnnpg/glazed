@@ -127,7 +127,7 @@ public class AutoInvTotem extends Module {
     private void onPacketReceive(PacketEvent.Receive event) {
         if (event.packet instanceof ClientboundEntityEventPacket packet) {
             if (packet.getEventId() == 35 && mc.player != null && packet.getEntity(mc.level) == mc.player) {
-                if (openInv.get() && mc.screen == null) {
+                if (openInv.get() && mc.gui.screen() == null) {
                     shouldOpenInv = true;
                     invOpenTicks = invOpenDelay.get();
                     if (!disableLogs.get()) {
@@ -152,7 +152,7 @@ public class AutoInvTotem extends Module {
                 info("Totem popped! Open inventory to auto-equip a new one.");
             }
 
-            if (mc.screen instanceof InventoryScreen) {
+            if (mc.gui.screen() instanceof InventoryScreen) {
                 if (!disableLogs.get()) {
                     info("Inventory already open - moving totem immediately!");
                 }
@@ -171,8 +171,8 @@ public class AutoInvTotem extends Module {
     private void handleAutoInventory() {
         if (shouldOpenInv && invOpenTicks > 0) {
             invOpenTicks--;
-            if (invOpenTicks == 0 && mc.screen == null) {
-                mc.setScreen(new InventoryScreen(mc.player));
+            if (invOpenTicks == 0 && mc.gui.screen() == null) {
+                mc.gui.setScreen(new InventoryScreen(mc.player));
                 invAutoOpened = true;
                 invCloseTicks = invCloseDelay.get();
                 shouldOpenInv = false;
@@ -184,8 +184,8 @@ public class AutoInvTotem extends Module {
 
         if (invAutoOpened && invCloseTicks > 0) {
             invCloseTicks--;
-            if (invCloseTicks == 0 && mc.screen instanceof InventoryScreen) {
-                mc.setScreen(null);
+            if (invCloseTicks == 0 && mc.gui.screen() instanceof InventoryScreen) {
+                mc.gui.setScreen(null);
                 invAutoOpened = false;
                 if (!disableLogs.get()) {
                     info("Auto-closed inventory.");
@@ -193,7 +193,7 @@ public class AutoInvTotem extends Module {
             }
         }
 
-        if (invAutoOpened && !(mc.screen instanceof InventoryScreen)) {
+        if (invAutoOpened && !(mc.gui.screen() instanceof InventoryScreen)) {
             invAutoOpened = false;
             invCloseTicks = 0;
         }

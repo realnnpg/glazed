@@ -453,7 +453,7 @@ public class AmethystESP extends Module {
         Set<BlockPos> hits = foundPositions.get(pos);
         int count = hits == null ? 0 : hits.size();
 
-        mc.getToastManager().addToast(new MeteorToast.Builder(title)
+        mc.gui.toastManager().addToast(new MeteorToast.Builder(title)
             .text("Geode found: " + count + " blocks at " + (pos.x() * 16 + 8) + ", " + (pos.z() * 16 + 8))
             .icon(Items.AMETHYST_CLUSTER)
             .build());

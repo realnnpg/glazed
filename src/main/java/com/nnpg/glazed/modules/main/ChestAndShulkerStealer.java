@@ -44,7 +44,7 @@ public class ChestAndShulkerStealer extends Module {
 
     @EventHandler
     private void onTick(TickEvent.Pre event) {
-        if (mc.player == null || mc.gameMode == null || mc.screen == null) return;
+        if (mc.player == null || mc.gameMode == null || mc.gui.screen() == null) return;
 
         int containerSize = 0;
 

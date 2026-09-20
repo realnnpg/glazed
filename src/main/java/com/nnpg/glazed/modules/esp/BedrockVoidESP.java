@@ -359,7 +359,7 @@ public class BedrockVoidESP extends Module {
 
         if (showTracers.get()) {
             Color color = tracerColor.get();
-            Vec3 camera = mc.gameRenderer.getMainCamera().position();
+            Vec3 camera = mc.gameRenderer.mainCamera().position();
 
             for (BlockPos pos : voidBlocks) {
                 Vec3 blockCenter = Vec3.atCenterOf(pos);

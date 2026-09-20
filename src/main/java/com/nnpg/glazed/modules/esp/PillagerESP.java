@@ -186,10 +186,10 @@ public class PillagerESP extends Module {
 
                     switch (notificationMode.get()) {
                         case Chat -> { if (notifications.get()) info("§5[§dPillagerESP§5] §c" + message); }
-                        case Toast -> mc.getToastManager().addToast(new MeteorToast.Builder(title).text(message).icon(Items.CROSSBOW).build());
+                        case Toast -> mc.gui.toastManager().addToast(new MeteorToast.Builder(title).text(message).icon(Items.CROSSBOW).build());
                         case Both -> {
                             if (notifications.get()) info("§5[§dPillagerESP§5] §c" + message);
-                            mc.getToastManager().addToast(new MeteorToast.Builder(title).text(message).icon(Items.CROSSBOW).build());
+                            mc.gui.toastManager().addToast(new MeteorToast.Builder(title).text(message).icon(Items.CROSSBOW).build());
                         }
                     }
                 }

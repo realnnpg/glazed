@@ -10,6 +10,7 @@ import meteordevelopment.meteorclient.utils.render.color.SettingColor;
 import meteordevelopment.orbit.EventHandler;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.world.item.*;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.tags.ItemTags;
@@ -33,15 +34,18 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.chunk.LevelChunk;
 import net.minecraft.world.phys.AABB;
+import net.minecraft.core.Holder;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.stream.Stream;
 
 public class CollectibleESP extends Module {
     private final SettingGroup sgGeneral = settings.getDefaultGroup();
     private final SettingGroup sgColors = settings.createGroup("Colors");
-    private final List<Item> defaultPlayerItems = new ArrayList<>(List.of(
+    private final List<Item> defaultPlayerItems = new ArrayList<>(Stream.concat(
+          Stream.of(
         Items.DIAMOND_HELMET,
         Items.DIAMOND_CHESTPLATE,
         Items.DIAMOND_LEGGINGS,
@@ -67,25 +71,12 @@ public class CollectibleESP extends Module {
         Items.END_CRYSTAL,
         Items.ENDER_CHEST,
         Items.TOTEM_OF_UNDYING,
-        Items.EXPERIENCE_BOTTLE,
-        Items.SHULKER_BOX,
-        Items.RED_SHULKER_BOX,
-        Items.ORANGE_SHULKER_BOX,
-        Items.YELLOW_SHULKER_BOX,
-        Items.LIME_SHULKER_BOX,
-        Items.GREEN_SHULKER_BOX,
-        Items.CYAN_SHULKER_BOX,
-        Items.LIGHT_BLUE_SHULKER_BOX,
-        Items.BLUE_SHULKER_BOX,
-        Items.PURPLE_SHULKER_BOX,
-        Items.MAGENTA_SHULKER_BOX,
-        Items.PINK_SHULKER_BOX,
-        Items.WHITE_SHULKER_BOX,
-        Items.LIGHT_GRAY_SHULKER_BOX,
-        Items.GRAY_SHULKER_BOX,
-        Items.BROWN_SHULKER_BOX,
-        Items.BLACK_SHULKER_BOX
-    ));
+        Items.EXPERIENCE_BOTTLE
+      ),
+      BuiltInRegistries.ITEM.getOrThrow(ItemTags.SHULKER_BOXES)
+        .stream()
+        .map(Holder::value)
+    ).toList());
     private final Setting<Boolean> highlightBanners = sgGeneral.add(new BoolSetting.Builder()
         .name("Find Banners")
         .description("highlights banners.")

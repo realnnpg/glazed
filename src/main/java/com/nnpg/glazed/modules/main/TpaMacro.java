@@ -88,7 +88,7 @@ public class TpaMacro extends Module {
             return;
         }
 
-        if (waitingForConfirm && mc.screen instanceof AbstractContainerScreen<?>) {
+        if (waitingForConfirm && mc.gui.screen() instanceof AbstractContainerScreen<?>) {
             clickConfirmButtonIfPresent();
             return;
         }
@@ -113,7 +113,7 @@ public class TpaMacro extends Module {
     }
 
     private void clickConfirmButtonIfPresent() {
-        if (!(mc.screen instanceof AbstractContainerScreen<?> screen)) return;
+        if (!(mc.gui.screen() instanceof AbstractContainerScreen<?> screen)) return;
 
         var handler = screen.getMenu();
 
