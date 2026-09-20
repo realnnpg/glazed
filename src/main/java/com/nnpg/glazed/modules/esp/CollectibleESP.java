@@ -44,8 +44,7 @@ import java.util.stream.Stream;
 public class CollectibleESP extends Module {
     private final SettingGroup sgGeneral = settings.getDefaultGroup();
     private final SettingGroup sgColors = settings.createGroup("Colors");
-    private final List<Item> defaultPlayerItems = new ArrayList<>(Stream.concat(
-          Stream.of(
+    private final List<Item> defaultPlayerItems = new ArrayList<>(List.of(
         Items.DIAMOND_HELMET,
         Items.DIAMOND_CHESTPLATE,
         Items.DIAMOND_LEGGINGS,
@@ -71,12 +70,14 @@ public class CollectibleESP extends Module {
         Items.END_CRYSTAL,
         Items.ENDER_CHEST,
         Items.TOTEM_OF_UNDYING,
-        Items.EXPERIENCE_BOTTLE
-      ),
-      BuiltInRegistries.ITEM.getOrThrow(ItemTags.SHULKER_BOXES)
-        .stream()
-        .map(Holder::value)
-    ).toList());
+        Items.EXPERIENCE_BOTTLE,
+        Items.SHULKER_BOX
+    ));
+
+    {
+      defaultPlayerItems.addAll(Items.DYED_SHULKER_BOX.asList());
+    }
+
     private final Setting<Boolean> highlightBanners = sgGeneral.add(new BoolSetting.Builder()
         .name("Find Banners")
         .description("highlights banners.")
