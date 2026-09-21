@@ -61,6 +61,7 @@ public class GlazedAddon extends MeteorAddon {
         Modules.get().add(new AdminHud());
         Modules.get().add(new AdminList());
         Modules.get().add(new AutoPearlChain());
+        Modules.get().add(new AutoRelog());
         Modules.get().add(new AutoSell());
         Modules.get().add(new AutoSpawnerSell());
         Modules.get().add(new ChestAndShulkerStealer());
@@ -73,9 +74,11 @@ public class GlazedAddon extends MeteorAddon {
         Modules.get().add(new GlazedFreelook());
         Modules.get().add(new GodTrident());
         Modules.get().add(new HideScoreboard());
+        Modules.get().add(new HomeMethod());
         Modules.get().add(new HomeReset());
         Modules.get().add(new NoBlockInteract());
         Modules.get().add(new OrderDropper());
+        Modules.get().add(new PearlMethod());
         Modules.get().add(new PlayerDetection());
         Modules.get().add(new PlayerBypass());
         Modules.get().add(new PremiumTunnelBaseFinder());
@@ -91,7 +94,6 @@ public class GlazedAddon extends MeteorAddon {
         Modules.get().add(new SpotifyHud());
         Modules.get().add(new TabDetector());
         Modules.get().add(new TpaMacro());
-        Modules.get().add(new UdRelog());
 
         // pvp
         Modules.get().add(new AimAssist());
