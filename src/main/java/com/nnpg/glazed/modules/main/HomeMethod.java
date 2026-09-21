@@ -9,7 +9,7 @@ import meteordevelopment.meteorclient.settings.SettingGroup;
 import meteordevelopment.meteorclient.systems.modules.Module;
 import meteordevelopment.orbit.EventHandler;
 
-public class UdRelog extends Module {
+public class HomeMethod extends Module {
   private static final int HOME_DELAY_TICKS = 5;
   private static final int RTP_DELAY_TICKS = 10;
   private static final int RTP_DONE_MOVE_SQ = 64;
@@ -23,7 +23,7 @@ public class UdRelog extends Module {
               .range(1, 3)
               .sliderRange(1, 3)
               .build());
-  private UdRelog.Step step = UdRelog.Step.SEND_DELHOME;
+  private HomeMethod.Step step = HomeMethod.Step.SEND_DELHOME;
   private int delayTicks;
   private int rtpWaitTicks;
   private double rtpOriginX;
@@ -31,12 +31,12 @@ public class UdRelog extends Module {
   private double rtpOriginZ;
   private boolean rtpFinished;
 
-  public UdRelog() {
-    super(GlazedAddon.CATEGORY, "undetected-relog", "Undetected relog method.");
+  public HomeMethod() {
+    super(GlazedAddon.CATEGORY, "home-method", "Saves a home, runs /rtp, then returns home.");
   }
 
   public void onActivate() {
-    this.step = UdRelog.Step.SEND_DELHOME;
+    this.step = HomeMethod.Step.SEND_DELHOME;
     this.delayTicks = 0;
     this.rtpWaitTicks = 0;
     this.rtpFinished = false;
@@ -52,13 +52,13 @@ public class UdRelog extends Module {
       case SEND_DELHOME:
         this.sendCommand("delhome " + this.homeSlot.get());
         this.delayTicks = HOME_DELAY_TICKS;
-        this.step = UdRelog.Step.WAIT_SET_HOME;
+        this.step = HomeMethod.Step.WAIT_SET_HOME;
         break;
       case WAIT_SET_HOME:
         if (this.tickDelayDone()) {
           this.sendCommand("sethome " + this.homeSlot.get());
           this.delayTicks = RTP_DELAY_TICKS;
-          this.step = UdRelog.Step.WAIT_RTP;
+          this.step = HomeMethod.Step.WAIT_RTP;
         }
         break;
       case WAIT_RTP:
@@ -69,14 +69,14 @@ public class UdRelog extends Module {
           this.rtpOriginZ = this.mc.player.getZ();
           this.rtpWaitTicks = 0;
           this.rtpFinished = false;
-          this.step = UdRelog.Step.WAIT_RTP_DONE;
+          this.step = HomeMethod.Step.WAIT_RTP_DONE;
         }
         break;
       case WAIT_RTP_DONE:
         this.rtpWaitTicks++;
         if (this.rtpFinished || this.rtpMoved() || this.rtpWaitTicks >= RTP_TIMEOUT_TICKS) {
           this.delayTicks = HOME_DELAY_TICKS;
-          this.step = UdRelog.Step.WAIT_HOME;
+          this.step = HomeMethod.Step.WAIT_HOME;
         }
         break;
       case WAIT_HOME:
@@ -90,7 +90,7 @@ public class UdRelog extends Module {
 
   @EventHandler
   private void onReceiveMessage(ReceiveMessageEvent event) {
-    if (this.step == UdRelog.Step.WAIT_RTP_DONE) {
+    if (this.step == HomeMethod.Step.WAIT_RTP_DONE) {
       String message = event.getMessage().getString().toLowerCase();
       if (message.contains("random location") || message.contains("teleported")) {
         this.rtpFinished = true;
