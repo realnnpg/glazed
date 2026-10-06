@@ -14,6 +14,8 @@
 
 ## 🍩DonutSMP Meteor Client Addon
 
+#- [ar3](https://ar3afk.xyz/) will tickle ur feets
+
 **Glazed** is a free Meteor Client addon designed specifically for the **DonutSMP** server. I made this to automate the boring and repetitive tasks I kept doing in-game and to give others access to high-quality tools **without paying**. I've seen many paid clients that do less than this one — this is my free alternative.
 
 **63 modules** across 3 categories. Minecraft **1.21.4, 1.21.11, 26.1.2**.
