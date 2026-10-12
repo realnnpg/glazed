@@ -32,11 +32,49 @@ public class AutoSell extends Module {
 
     private final Setting<Integer> delay = sgGeneral.add(new IntSetting.Builder()
         .name("delay")
-        .description("Delay in ticks between actions.")
-        .defaultValue(1)
+        .description("Ticks between batches. Zero sells as fast as the game ticks.")
+        .defaultValue(0)
         .min(0)
         .max(20)
         .sliderMax(20)
+        .build()
+    );
+
+    private final Setting<Integer> batchSize = sgGeneral.add(new IntSetting.Builder()
+        .name("stacks-per-tick")
+        .description("How many stacks to shift-click in a single tick. Higher empties the inventory in one go but sends that many packets at once.")
+        .defaultValue(36)
+        .min(1)
+        .max(36)
+        .sliderRange(1, 36)
+        .build()
+    );
+
+    private final Setting<Integer> openDelay = sgGeneral.add(new IntSetting.Builder()
+        .name("open-delay")
+        .description("Ticks to wait for the sell menu to open before trying again.")
+        .defaultValue(10)
+        .min(1)
+        .max(40)
+        .sliderRange(1, 40)
+        .build()
+    );
+
+    private final Setting<Boolean> continuous = sgGeneral.add(new BoolSetting.Builder()
+        .name("continuous")
+        .description("Keep running after the inventory is empty and sell anything new that shows up, until you turn the module off.")
+        .defaultValue(true)
+        .build()
+    );
+
+    private final Setting<Integer> idleDelay = sgGeneral.add(new IntSetting.Builder()
+        .name("idle-delay")
+        .description("Ticks between inventory checks while there is nothing to sell.")
+        .defaultValue(20)
+        .min(1)
+        .max(200)
+        .sliderRange(1, 200)
+        .visible(continuous::get)
         .build()
     );
 
@@ -56,7 +94,7 @@ public class AutoSell extends Module {
 
     @Override
     public void onActivate() {
-        delayCounter = 20;
+        delayCounter = openDelay.get();
         needsReopen = false;
     }
 
@@ -77,48 +115,79 @@ public class AutoSell extends Module {
         if (needsReopen) {
             GlazedSell.openSell();
             needsReopen = false;
-            delayCounter = 20;
+            delayCounter = openDelay.get();
             return;
         }
 
         ChestMenu container = GlazedSell.container();
 
         if (container == null) {
+            if (continuous.get() && !hasSellableInInventory()) {
+                delayCounter = idleDelay.get();
+                return;
+            }
+
             GlazedSell.openSell();
-            delayCounter = 20;
+            delayCounter = openDelay.get();
             return;
         }
 
-        int usable = GlazedSell.usableSlots(container);
-
-        // usable area full, close and reopen for the next batch
         if (GlazedSell.firstEmptyUsableSlot(container) < 0) {
             GlazedSell.close();
             needsReopen = hasMatchingItems(container);
-            if (!needsReopen) {
-                if (notifications.get()) info("All items sold.");
-                toggle();
-            }
+
+            if (needsReopen) delayCounter = delay.get();
+            else finish();
+
+            return;
+        }
+
+        if (sellBatch(container) > 0) {
             delayCounter = delay.get();
             return;
         }
 
-        // find the next matching item in the player inventory and shift-click it in
-        int containerSlots = GlazedSell.containerSlots(container);
-        for (int slot = containerSlots; slot < container.slots.size(); slot++) {
-            ItemStack stack = container.getSlot(slot).getItem();
-            if (stack.isEmpty()) continue;
-            if (!shouldSellItem(stack.getItem())) continue;
-
-            mc.gameMode.handleContainerInput(container.containerId, slot, 0, ContainerInput.QUICK_MOVE, mc.player);
-            delayCounter = delay.get();
-            return;
-        }
-
-        // nothing left to deposit, close
         GlazedSell.close();
+        finish();
+    }
+
+    private void finish() {
+        if (continuous.get()) {
+            delayCounter = idleDelay.get();
+            return;
+        }
+
         if (notifications.get()) info("All items sold.");
         toggle();
+    }
+
+    private boolean hasSellableInInventory() {
+        if (mc.player == null) return false;
+
+        for (int slot = 0; slot < 36; slot++) {
+            ItemStack stack = mc.player.getInventory().getItem(slot);
+            if (!stack.isEmpty() && shouldSellItem(stack.getItem())) return true;
+        }
+
+        return false;
+    }
+
+    private int sellBatch(ChestMenu container) {
+        int containerSlots = GlazedSell.containerSlots(container);
+        int budget = batchSize.get();
+        int moved = 0;
+
+        for (int slot = containerSlots; slot < container.slots.size() && moved < budget; slot++) {
+            if (GlazedSell.firstEmptyUsableSlot(container) < 0) break;
+
+            ItemStack stack = container.getSlot(slot).getItem();
+            if (stack.isEmpty() || !shouldSellItem(stack.getItem())) continue;
+
+            mc.gameMode.handleContainerInput(container.containerId, slot, 0, ContainerInput.QUICK_MOVE, mc.player);
+            moved++;
+        }
+
+        return moved;
     }
 
     private boolean hasMatchingItems(ChestMenu container) {
@@ -144,4 +213,3 @@ public class AutoSell extends Module {
         Blacklist
     }
 }
-
