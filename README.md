@@ -7,7 +7,7 @@
   <a href="https://github.com/realnnpg/Glazed/releases"><img src="https://img.shields.io/github/downloads/realnnpg/Glazed/total.svg?style=for-the-badge&label=Downloads" alt="Downloads"/></a>
   <img src="https://img.shields.io/github/stars/realnnpg/Glazed?style=for-the-badge" alt="Stars"/>
   <img src="https://img.shields.io/github/repo-size/realnnpg/Glazed?style=for-the-badge" alt="Repo Size"/>
-  <a href="https://discord.gg/glazedclient"><img src="https://img.shields.io/discord/1282076342908747879?color=%237289DA&label=Discord&logo=discord&logoColor=white&style=for-the-badge" alt="Discord"/></a>
+  <a href="https://discord.gg/glazedclient"><img src="https://img.shields.io/discord/1511392477859418272?color=%237289DA&label=Discord&logo=discord&logoColor=white&style=for-the-badge" alt="Discord"/></a>
 </p>
 
 ---

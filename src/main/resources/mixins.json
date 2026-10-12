@@ -4,6 +4,9 @@
   "compatibilityLevel": "JAVA_21",
   "mixins": [],
   "client": [
+    "ClientPlayerInteractionManagerAccessor",
+    "GlazedTitleBackgroundMixin",
+    "SwingDurationMixin",
     "HandledScreenMixin",
     "DefaultSettingsWidgetFactoryAccessor",
     "DefaultSettingsWidgetFactoryMixin",

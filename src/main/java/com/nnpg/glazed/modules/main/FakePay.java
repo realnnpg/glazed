@@ -16,7 +16,7 @@ import java.util.Locale;
 
 public class FakePay extends Module {
     private static final int WHITE = 0xFFFFFF;
-    private static final int GREEN = 0x55FF55;
+    private static final int GREEN = 0x00FC00;
 
     private final SettingGroup sgGeneral = settings.getDefaultGroup();
 

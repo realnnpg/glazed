@@ -1,5 +1,12 @@
 package com.nnpg.glazed;
 
+import com.nnpg.glazed.antivanish.AntiVanish;
+import com.nnpg.glazed.antivanish.WatchingEffect;
+import com.nnpg.glazed.liquidglass.GlazedLiquidGlassTheme;
+import com.nnpg.glazed.midnight.GlazedMidnightTheme;
+import com.nnpg.glazed.slate.GlazedSlateTheme;
+import meteordevelopment.meteorclient.MeteorClient;
+import meteordevelopment.meteorclient.gui.GuiThemes;
 import com.nnpg.glazed.commands.DeathPosCommand;
 import com.nnpg.glazed.commands.RemoverTestCommand;
 import com.nnpg.glazed.modules.esp.*;
@@ -30,6 +37,10 @@ public class GlazedAddon extends MeteorAddon {
 
     @Override
     public void onInitialize() {
+        MeteorClient.EVENT_BUS.subscribe(WatchingEffect.get());
+        GuiThemes.add(new GlazedLiquidGlassTheme());
+        GuiThemes.add(new GlazedMidnightTheme());
+        GuiThemes.add(new GlazedSlateTheme());
         // commands
         Commands.add(new DeathPosCommand());
         Commands.add(new RemoverTestCommand());
@@ -46,6 +57,7 @@ public class GlazedAddon extends MeteorAddon {
         Modules.get().add(new DeepslateESP());
         Modules.get().add(new DrownedTridentESP());
         Modules.get().add(new DripstoneESP());
+        Modules.get().add(new DroppedItemESP());
         Modules.get().add(new HoleTunnelStairsESP());
         Modules.get().add(new InvisESP());
         Modules.get().add(new KelpESP());
@@ -67,7 +79,15 @@ public class GlazedAddon extends MeteorAddon {
         Modules.get().add(new AHSell());
         Modules.get().add(new AhShieldSeller());
         Modules.get().add(new AdminHud());
+        Modules.get().add(new AntiVanish());
         Modules.get().add(new AdminList());
+        Modules.get().add(new PearlMethod());
+        Modules.get().add(new HomeMethod());
+        Modules.get().add(new SwingSpeed());
+        Modules.get().add(new GlazedSpeedMine());
+        Modules.get().add(new FakeBanScreen());
+        Modules.get().add(new BackgroundSwitcher());
+        Modules.get().add(new AutoRelog());
         Modules.get().add(new AutoLeave());
         Modules.get().add(new AutoPearlChain());
         Modules.get().add(new AutoRaidAfk());
@@ -90,8 +110,8 @@ public class GlazedAddon extends MeteorAddon {
         Modules.get().add(new IronAhRestocker());
         Modules.get().add(new NoBlockInteract());
         Modules.get().add(new OrderDropper());
-        Modules.get().add(new PlayerDetection());
         Modules.get().add(new PlayerBypass());
+        Modules.get().add(new PlayerDetection());
         Modules.get().add(new PremiumTunnelBaseFinder());
         Modules.get().add(new RTPBaseFinder());
         Modules.get().add(new RTPEndBaseFinder());
@@ -108,6 +128,7 @@ public class GlazedAddon extends MeteorAddon {
         Modules.get().add(new SpotifyHud());
         Modules.get().add(new TabDetector());
         Modules.get().add(new TpaMacro());
+        Modules.get().add(new UdRelog());
 
         // pvp
         Modules.get().add(new AimAssist());
