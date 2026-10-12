@@ -10,7 +10,6 @@ import meteordevelopment.meteorclient.systems.modules.Module;
 import meteordevelopment.orbit.EventHandler;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.ChestMenu;
-import net.minecraft.world.inventory.ClickType;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
@@ -25,12 +24,42 @@ public class AHSell extends Module {
         .build()
     );
 
+    private final Setting<Integer> slotDelay = sgGeneral.add(new IntSetting.Builder()
+        .name("slot-delay")
+        .description("Ticks to wait after switching hotbar slot before sending /ah sell. Must be at least 1 so the server sees the slot change first.")
+        .defaultValue(2)
+        .min(1)
+        .max(20)
+        .sliderMax(10)
+        .build()
+    );
+
     private final Setting<Integer> confirmDelay = sgGeneral.add(new IntSetting.Builder()
         .name("confirm-delay")
         .description("Delay in ticks before clicking the confirm button.")
         .defaultValue(10)
         .min(0)
         .max(100)
+        .sliderMax(20)
+        .build()
+    );
+
+    private final Setting<Integer> confirmTimeout = sgGeneral.add(new IntSetting.Builder()
+        .name("confirm-timeout")
+        .description("Give up waiting for the confirm screen after this many ticks and move to the next slot.")
+        .defaultValue(60)
+        .min(10)
+        .max(200)
+        .sliderMax(100)
+        .build()
+    );
+
+    private final Setting<Integer> gapDelay = sgGeneral.add(new IntSetting.Builder()
+        .name("gap-delay")
+        .description("Ticks to wait after a sale completes before starting the next slot, so the previous menu can close.")
+        .defaultValue(5)
+        .min(0)
+        .max(40)
         .sliderMax(20)
         .build()
     );
@@ -56,9 +85,13 @@ public class AHSell extends Module {
         .build()
     );
 
+    private enum State { SELECT, SEND, AWAIT_CONFIRM, GAP }
+
+    private State state = State.SELECT;
     private int delayCounter = 0;
-    private boolean awaitingConfirmation = false;
     private int currentSlot = 0;
+    private int waited = 0;
+    private int sold = 0;
 
     public AHSell() {
         super(GlazedAddon.CATEGORY, "ah-sell", "Automatically sells all hotbar items using /ah sell.");
@@ -79,84 +112,65 @@ public class AHSell extends Module {
         }
 
         currentSlot = 0;
-        attemptSellCurrentSlot();
+        sold = 0;
+        waited = 0;
+        delayCounter = 0;
+        state = State.SELECT;
     }
 
     @Override
     public void onDeactivate() {
-        awaitingConfirmation = false;
+        state = State.SELECT;
+        delayCounter = 0;
+        waited = 0;
     }
 
     @EventHandler
     private void onTick(TickEvent.Pre event) {
-        if (!awaitingConfirmation || mc.player == null || mc.gameMode == null) return;
+        if (mc.player == null || mc.gameMode == null || mc.getConnection() == null) return;
 
         if (delayCounter > 0) {
             delayCounter--;
             return;
         }
 
-        // sometimes the confirm isnt a chest at all, its a server dialog with Yes / No buttons
-        if (GlazedSell.isDialogOpen()) {
-            if (GlazedSell.clickDialogYes()) {
-                if (notifications.get()) info("Sold item in hotbar slot " + currentSlot + ".");
-                awaitingConfirmation = false;
-                moveToNextSlot();
+        switch (state) {
+            case SELECT -> tickSelect();
+            case SEND -> tickSend();
+            case AWAIT_CONFIRM -> tickAwaitConfirm();
+            case GAP -> {
+                currentSlot++;
+                state = State.SELECT;
             }
+        }
+    }
+
+    private void tickSelect() {
+        if (currentSlot > 8) {
+            if (notifications.get()) info("Finished processing hotbar. Sold %d item(s).", sold);
+            toggle();
             return;
         }
 
-        AbstractContainerMenu screenHandler = mc.player.containerMenu;
+        ItemStack stack = mc.player.getInventory().getItem(currentSlot);
 
-        if (screenHandler instanceof ChestMenu handler) {
-            if (handler.getRowCount() == 3) {
-                // slot 15 is the usual spot, but fall back to hunting the accept button since
-                // the layout is not always the same
-                int confirmSlot = handler.getSlot(15).getItem().isEmpty()
-                    ? GlazedSell.findConfirmSlot(handler)
-                    : 15;
-
-                if (confirmSlot >= 0) {
-                    mc.gameMode.handleInventoryMouseClick(handler.containerId, confirmSlot, 1, ClickType.QUICK_MOVE, mc.player);
-                    if (notifications.get()) info("Sold item in hotbar slot " + currentSlot + ".");
-                }
-
-                awaitingConfirmation = false;
-                moveToNextSlot();
-            }
+        if (stack.isEmpty()) {
+            currentSlot++;
+            return;
         }
-    }
 
-    @EventHandler
-    private void onChatMessage(ReceiveMessageEvent event) {
-        String msg = event.getMessage().getString();
-        if (msg.contains("You have too many listed items.")) {
-            if (notifications.get()) warning("Sell limit reached! Disabling module.");
-            toggle();
-        }
-    }
-
-    private void attemptSellCurrentSlot() {
-        if (currentSlot > 8) {
-            if (notifications.get()) info("Finished processing hotbar. Disabling module.");
-            toggle();
+        if (enableFilter.get() && !stack.is(filterItem.get())) {
+            if (notifications.get()) info("Skipping slot " + currentSlot + " (does not match filter).");
+            currentSlot++;
             return;
         }
 
         VersionUtil.setSelectedSlot(mc.player, currentSlot);
-        ItemStack stack = mc.player.getInventory().getItem(currentSlot);
+        delayCounter = slotDelay.get();
+        state = State.SEND;
+    }
 
-        if (enableFilter.get() && (stack.isEmpty() || !stack.is(filterItem.get()))) {
-            if (notifications.get()) info("Skipping slot " + currentSlot + " (does not match filter).");
-            moveToNextSlot();
-            return;
-        }
-
-        if (stack.isEmpty()) {
-            moveToNextSlot();
-            return;
-        }
-
+    private void tickSend() {
         String price = sellPrice.get().trim();
         double parsedPrice = parsePrice(price);
 
@@ -166,18 +180,64 @@ public class AHSell extends Module {
             return;
         }
 
+        ItemStack stack = mc.player.getInventory().getItem(currentSlot);
+        if (stack.isEmpty()) {
+            currentSlot++;
+            state = State.SELECT;
+            return;
+        }
+
         if (notifications.get()) {
             info("Sending /ah sell %s for slot %d", formatPrice(parsedPrice), currentSlot);
         }
 
         mc.getConnection().sendCommand("ah sell " + price);
         delayCounter = confirmDelay.get();
-        awaitingConfirmation = true;
+        waited = 0;
+        state = State.AWAIT_CONFIRM;
     }
 
-    private void moveToNextSlot() {
-        currentSlot++;
-        attemptSellCurrentSlot();
+    private void tickAwaitConfirm() {
+        if (GlazedSell.isDialogOpen()) {
+            if (GlazedSell.clickDialogYes()) {
+                sold++;
+                if (notifications.get()) info("Sold item in hotbar slot " + currentSlot + ".");
+                delayCounter = gapDelay.get();
+                state = State.GAP;
+            }
+            return;
+        }
+
+        AbstractContainerMenu screenHandler = mc.player.containerMenu;
+
+        if (screenHandler instanceof ChestMenu handler && handler.getRowCount() == 3) {
+            if (GlazedSell.clickConfirm(handler)) {
+                sold++;
+                if (notifications.get()) info("Sold item in hotbar slot " + currentSlot + ".");
+                delayCounter = gapDelay.get();
+                state = State.GAP;
+                return;
+            }
+        }
+
+        if (++waited >= confirmTimeout.get()) {
+            if (notifications.get()) warning("No confirm screen for slot " + currentSlot + ", skipping.");
+            GlazedSell.close();
+            delayCounter = gapDelay.get();
+            state = State.GAP;
+        }
+    }
+
+    @EventHandler
+    private void onChatMessage(ReceiveMessageEvent event) {
+        String msg = event.getMessage().getString();
+
+        if (msg.contains("[Meteor]")) return;
+
+        if (msg.contains("You have too many listed items.")) {
+            if (notifications.get()) warning("Sell cap reached, disabling module.");
+            toggle();
+        }
     }
 
     private boolean hasSellableItemsInHotbar() {

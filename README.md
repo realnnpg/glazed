@@ -16,19 +16,20 @@
 
 **Glazed** is a free Meteor Client addon designed specifically for the **DonutSMP** server. I made this to automate the boring and repetitive tasks I kept doing in-game and to give others access to high-quality tools **without paying**. I've seen many paid clients that do less than this one — this is my free alternative.
 
-**63 modules** across 3 categories. Minecraft **1.21.4, 1.21.11, 26.1.2**.
+**66 modules** across 3 categories. Minecraft **1.21.4, 1.21.11, 26.1.2**.
 
 ---
 
 ## 🚀Features
 
-### Main Modules (27)
+### Main Modules (30)
 
 | Module | Description |
 |---|---|
 | Admin Hud | Tells you when staff are in tab with live skin faces |
 | Admin List | List of administrators to be ignored by other modules |
 | AH Sell | Automatically sells all hotbar items using /ah sell |
+| Ah Shield Seller | Takes a chest of shields, undercuts the cheapest listing and collects unsold ones back |
 | Auto Pearl Chain | Chains pearls after teleport detection |
 | Auto Sell | Automatically sells items |
 | Auto Spawner Sell | Drops bones from spawner and sells them |
@@ -40,6 +41,8 @@
 | Glazed Freecam | Move freely with scroll-adjustable speed |
 | Hide Scoreboard | Hides sidebar scoreboard |
 | Home Reset | Runs /delhome + /sethome for a selected slot |
+| Inv Sell | Sells your entire inventory on the AH, pulling stock up into the hotbar as it goes |
+| Iron Ah Restocker | Reads the cheapest AH price and keeps it stocked with single ingots from a chest |
 | No Block Interact | Pearl through containers by blocking GUI interactions |
 | Order Dropper | Processes orders + drops items |
 | Player Detection | Detects players in the world |
