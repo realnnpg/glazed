@@ -76,7 +76,6 @@ public class GlazedAddon extends MeteorAddon {
         Modules.get().add(new FakeBanScreen());
         Modules.get().add(new BackgroundSwitcher());
         Modules.get().add(new AutoRelog());
-        Modules.get().add(new AutoLeave());
         Modules.get().add(new AutoPearlChain());
         Modules.get().add(new AutoSell());
         Modules.get().add(new AutoSpawnerSell());
