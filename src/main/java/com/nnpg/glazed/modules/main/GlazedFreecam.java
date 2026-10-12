@@ -114,7 +114,7 @@ public class GlazedFreecam extends Module {
         lastFrameTime = System.currentTimeMillis();
         resetMovementKeys();
 
-        if (mc.levelRenderer != null) mc.levelRenderer.allChanged();
+        reloadChunks();
     }
 
     @Override
@@ -145,7 +145,7 @@ public class GlazedFreecam extends Module {
         previousYaw = yaw;
         previousPitch = pitch;
 
-        if (mc.levelRenderer != null) mc.execute(mc.levelRenderer::allChanged);
+        mc.execute(this::reloadChunks);
 
         if (mc.options == null) return;
 
@@ -219,7 +219,7 @@ public class GlazedFreecam extends Module {
 
     @EventHandler(priority = EventPriority.HIGH)
     private void onMouseScroll(MouseScrollEvent event) {
-        if (event.value == 0 || mc.screen != null) return;
+        if (event.value == 0 || mc.gui.screen() != null) return;
 
         adjustSpeed(event.value > 0 ? 1 : -1);
         event.cancel();
@@ -271,7 +271,7 @@ public class GlazedFreecam extends Module {
     }
 
     private void pollMovementKeys() {
-        boolean active = mc.screen == null && !isKeyPressed(GLFW.GLFW_KEY_F3);
+        boolean active = mc.gui.screen() == null && !isKeyPressed(GLFW.GLFW_KEY_F3);
 
         isMovingForward = active && isBoundDown(mc.options.keyUp);
         isMovingBackward = active && isBoundDown(mc.options.keyDown);
@@ -300,5 +300,10 @@ public class GlazedFreecam extends Module {
 
     private boolean isKeyPressed(int key) {
         return mc.getWindow() != null && GLFW.glfwGetKey(mc.getWindow().handle(), key) == GLFW.GLFW_PRESS;
+    }
+
+    private void reloadChunks() {
+        if (mc.levelRenderer == null || mc.level == null) return;
+        mc.levelRenderer.invalidateCompiledGeometry(mc.level, mc.options, mc.gameRenderer.mainCamera(), mc.getBlockColors());
     }
 }

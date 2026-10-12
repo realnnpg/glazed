@@ -453,7 +453,7 @@ public class SlabSeller extends Module {
 
     private void tickSellClose() {
         GlazedSell.close();
-        if (mc.screen != null) mc.setScreen(null);
+        if (mc.gui.screen() != null) mc.gui.setScreen(null);
         finishLoad();
     }
 
@@ -541,7 +541,7 @@ public class SlabSeller extends Module {
 
     private void closeAnyMenu() {
         if (mc.player != null && mc.player.containerMenu != mc.player.inventoryMenu) mc.player.closeContainer();
-        if (mc.screen != null) mc.setScreen(null);
+        if (mc.gui.screen() != null) mc.gui.setScreen(null);
     }
 
     private int jitter(int ticks, int floor) {

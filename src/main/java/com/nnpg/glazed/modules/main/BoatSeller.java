@@ -967,18 +967,18 @@ public class BoatSeller extends Module {
             return;
         }
 
-        if (mc.screen instanceof InventoryScreen) {
+        if (mc.gui.screen() instanceof InventoryScreen) {
             state = State.PULL;
             return;
         }
 
-        mc.setScreen(new InventoryScreen(mc.player));
+        mc.gui.setScreen(new InventoryScreen(mc.player));
         delayCounter = delay(screenDelay, false);
         state = State.PULL;
     }
 
     private void tickPull() {
-        if (mc.player.containerMenu != mc.player.inventoryMenu || !(mc.screen instanceof InventoryScreen)) {
+        if (mc.player.containerMenu != mc.player.inventoryMenu || !(mc.gui.screen() instanceof InventoryScreen)) {
             state = State.PULL_OPEN;
             return;
         }
@@ -1020,7 +1020,7 @@ public class BoatSeller extends Module {
     }
 
     private void tickPullClose() {
-        if (mc.screen instanceof InventoryScreen screen) screen.onClose();
+        if (mc.gui.screen() instanceof InventoryScreen screen) screen.onClose();
         currentSlot = 0;
         stalledPulls = 0;
         delayCounter = delay(screenDelay, false);
@@ -1224,7 +1224,7 @@ public class BoatSeller extends Module {
 
     private void closeAnyMenu() {
         if (mc.player != null && mc.player.containerMenu != mc.player.inventoryMenu) mc.player.closeContainer();
-        if (mc.screen != null) mc.setScreen(null);
+        if (mc.gui.screen() != null) mc.gui.setScreen(null);
     }
 
     private void startLimitCooldown() {

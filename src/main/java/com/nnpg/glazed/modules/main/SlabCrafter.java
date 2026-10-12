@@ -1256,7 +1256,7 @@ public class SlabCrafter extends Module {
     }
 
     private boolean isSlab(ItemStack stack) {
-        return !stack.isEmpty() && stack.is(ItemTags.SLABS);
+        return !stack.isEmpty() && net.minecraft.world.level.block.Block.byItem(stack.getItem()).defaultBlockState().is(net.minecraft.tags.BlockTags.SLABS);
     }
 
     private int countInInventory(java.util.function.Predicate<ItemStack> test) {
@@ -1311,7 +1311,7 @@ public class SlabCrafter extends Module {
 
     private void closeAnyMenu() {
         if (mc.player != null && mc.player.containerMenu != mc.player.inventoryMenu) mc.player.closeContainer();
-        if (mc.screen != null) mc.setScreen(null);
+        if (mc.gui.screen() != null) mc.gui.setScreen(null);
     }
 
     private int jitter(int ticks, int floor) {

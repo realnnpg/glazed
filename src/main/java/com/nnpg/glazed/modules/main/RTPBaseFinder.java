@@ -42,7 +42,7 @@ public class RTPBaseFinder extends Module {
 
     @EventHandler
     private void onTick(TickEvent.Pre event) {
-        if (mc.player == null || mc.level == null || mc.options == null || mc.screen != null) return;
+        if (mc.player == null || mc.level == null || mc.options == null || mc.gui.screen() != null) return;
 
         if (waitingForTeleport) {
             if (System.currentTimeMillis() - lastTeleportTime > 3000) {

@@ -118,7 +118,7 @@ public class EmergencySeller extends Module {
 
                 if (ticksSinceCommand >= 5) {
                     mc.player.connection.sendCommand("ah sell 1b");
-                    mc.setScreen(null);
+                    mc.gui.setScreen(null);
                     commandSent = true;
                     ticksSinceCommand = 0;
                 }
@@ -139,7 +139,7 @@ public class EmergencySeller extends Module {
                 return;
             }
 
-            if (mc.screen instanceof ContainerScreen screen) {
+            if (mc.gui.screen() instanceof ContainerScreen screen) {
                 AbstractContainerMenu handler = screen.getMenu();
 
                 if (confirmClick(handler, 15)) return;
@@ -190,7 +190,7 @@ public class EmergencySeller extends Module {
     }
 
     private boolean isGreenGlass(ItemStack stack) {
-        return stack.getItem() == Items.LIME_STAINED_GLASS_PANE || stack.getItem() == Items.GREEN_STAINED_GLASS_PANE;
+        return stack.getItem() == Items.STAINED_GLASS_PANE.lime() || stack.getItem() == Items.STAINED_GLASS_PANE.green();
     }
 
     private int getSlotId(int invIndex) {

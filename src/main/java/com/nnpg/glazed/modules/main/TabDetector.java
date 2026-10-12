@@ -97,12 +97,12 @@ public class TabDetector extends Module {
             case Chat -> { if (notifications.get()) info(message); }
             case Toast -> {
                 String toastMessage = players.size() == 1 ? "Target Player Joined!" : "Target Players Joined!";
-                mc.getToastManager().addToast(new MeteorToast.Builder(title).text(toastMessage).icon(Items.PLAYER_HEAD).build());
+                mc.gui.toastManager().addToast(new MeteorToast.Builder(title).text(toastMessage).icon(Items.PLAYER_HEAD).build());
             }
             case Both -> {
                 if (notifications.get()) info(message);
                 String toastMessage = players.size() == 1 ? "Target Player Joined!" : "Target Players Joined!";
-                mc.getToastManager().addToast(new MeteorToast.Builder(title).text(toastMessage).icon(Items.PLAYER_HEAD).build());
+                mc.gui.toastManager().addToast(new MeteorToast.Builder(title).text(toastMessage).icon(Items.PLAYER_HEAD).build());
             }
         }
 
@@ -118,12 +118,12 @@ public class TabDetector extends Module {
             case Chat -> { if (notifications.get()) info(message); }
             case Toast -> {
                 String toastMessage = players.size() == 1 ? "Target Player Left!" : "Target Players Left!";
-                mc.getToastManager().addToast(new MeteorToast.Builder(title).text(toastMessage).icon(Items.BARRIER).build());
+                mc.gui.toastManager().addToast(new MeteorToast.Builder(title).text(toastMessage).icon(Items.BARRIER).build());
             }
             case Both -> {
                 if (notifications.get()) info(message);
                 String toastMessage = players.size() == 1 ? "Target Player Left!" : "Target Players Left!";
-                mc.getToastManager().addToast(new MeteorToast.Builder(title).text(toastMessage).icon(Items.BARRIER).build());
+                mc.gui.toastManager().addToast(new MeteorToast.Builder(title).text(toastMessage).icon(Items.BARRIER).build());
             }
         }
 

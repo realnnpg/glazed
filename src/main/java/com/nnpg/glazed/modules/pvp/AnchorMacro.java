@@ -193,7 +193,7 @@ public class AnchorMacro extends Module {
 
     @EventHandler
     private void onTick(TickEvent.Pre event) {
-        if (mc.player == null || mc.level == null || mc.screen != null) return;
+        if (mc.player == null || mc.level == null || mc.gui.screen() != null) return;
 
         if (!isUseHeld()) {
             resetClocks();

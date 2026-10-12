@@ -38,7 +38,7 @@ public class MyScreen extends WindowScreen {
 
             if (isNewerThanInstalled(latest)) {
                 Minecraft.getInstance().execute(() ->
-                    Minecraft.getInstance().setScreen(new MyScreen(GuiThemes.get())));
+                    Minecraft.getInstance().gui.setScreen(new MyScreen(GuiThemes.get())));
             }
         });
     }

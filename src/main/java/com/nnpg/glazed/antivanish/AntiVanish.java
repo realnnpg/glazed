@@ -43,6 +43,7 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.EntityTypes;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.projectile.Projectile;
 import net.minecraft.world.level.GameType;
@@ -215,7 +216,7 @@ public class AntiVanish extends Module {
         double gs = mc.getWindow().getGuiScale();
         TextRenderer text = TextRenderer.get();
 
-        text.begin(0.9 * gs);
+        text.begin(event.graphics, 0.9 * gs);
 
         double x = 8 * gs;
         double y = 8 * gs;
@@ -844,7 +845,7 @@ public class AntiVanish extends Module {
         if (!doorLike || source == null || mc.level == null) return false;
 
         for (Entity entity : mc.level.entitiesForRendering()) {
-            if (entity.getType() == EntityType.VILLAGER && entity.position().distanceToSqr(source) <= 9.0) return true;
+            if (entity.getType() == EntityTypes.VILLAGER && entity.position().distanceToSqr(source) <= 9.0) return true;
         }
 
         return false;

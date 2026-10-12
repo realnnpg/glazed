@@ -358,7 +358,7 @@ public class BlockNotifier extends Module {
         try {
             Block first_block = found_blocks.keySet().iterator().next();
             MeteorToast toast = new MeteorToast.Builder(title).text(message).icon(first_block.asItem()).build();
-            mc.getToastManager().addToast(toast);
+            mc.gui.toastManager().addToast(toast);
         } catch (Exception e) {
             if (notifications.get()) info(message);
         }

@@ -313,7 +313,7 @@ public class AutoRaidAfk extends Module {
             return;
         }
 
-        if (mc.screen != null) {
+        if (mc.gui.screen() != null) {
             nag("A screen is open, not clicking through it.");
             return;
         }
@@ -475,7 +475,7 @@ public class AutoRaidAfk extends Module {
     private Boolean raidBarUp() {
         if (mc.gui == null) return null;
 
-        BossHealthOverlay overlay = mc.gui.getBossOverlay();
+        BossHealthOverlay overlay = mc.gui.hud.getBossOverlay();
         if (overlay == null) return null;
 
         List<Field> fields = bossMapFields();

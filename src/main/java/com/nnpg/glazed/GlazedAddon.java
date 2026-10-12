@@ -33,7 +33,7 @@ public class GlazedAddon extends MeteorAddon {
     public static final String VERSION = resolveVersion();
 
     // change this when porting to a new mc version
-    public static final String VERSION_CHECK_URL = "https://glazedclient.com/versions/normal26.1.2.txt";
+    public static final String VERSION_CHECK_URL = "https://glazedclient.com/versions/normal26.2.txt";
 
     @Override
     public void onInitialize() {

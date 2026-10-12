@@ -334,7 +334,7 @@ public class SpawnerNotifier extends Module {
     private void show_toast_notification(String message) {
         try {
             MeteorToast toast = new MeteorToast.Builder(title).text(message).icon(Items.SPAWNER).build();
-            mc.getToastManager().addToast(toast);
+            mc.gui.toastManager().addToast(toast);
         } catch (Exception e) {
             if (notifications.get()) info(message);
         }

@@ -66,8 +66,8 @@ public final class GlazedSell {
     public static boolean isConfirmButton(ItemStack stack) {
         if (stack.isEmpty()) return false;
 
-        if (stack.is(Items.LIME_STAINED_GLASS_PANE) || stack.is(Items.GREEN_STAINED_GLASS_PANE)
-            || stack.is(Items.LIME_DYE) || stack.is(Items.GREEN_DYE)) {
+        if (stack.is(Items.STAINED_GLASS_PANE.lime()) || stack.is(Items.STAINED_GLASS_PANE.green())
+            || stack.is(Items.DYE.lime()) || stack.is(Items.DYE.green())) {
             return true;
         }
 
@@ -82,7 +82,7 @@ public final class GlazedSell {
     public static boolean isDeclineButton(ItemStack stack) {
         if (stack.isEmpty()) return false;
 
-        if (stack.is(Items.RED_STAINED_GLASS_PANE) || stack.is(Items.BARRIER)) return true;
+        if (stack.is(Items.STAINED_GLASS_PANE.red()) || stack.is(Items.BARRIER)) return true;
 
         String name = stack.getHoverName().getString().toLowerCase(Locale.ROOT);
         return name.equals("no") || name.contains("cancel") || name.contains("decline");
@@ -117,13 +117,13 @@ public final class GlazedSell {
     // porting note: server dialogs are 1.21.6+ only. going back, delete this, isDialogOpen,
     // pressMatching and the DialogScreen import. the rest of this file works on any version
     public static boolean clickDialogYes() {
-        if (!(mc.screen instanceof DialogScreen<?>)) return false;
+        if (!(mc.gui.screen() instanceof DialogScreen<?>)) return false;
 
-        return pressMatching(mc.screen.children());
+        return pressMatching(mc.gui.screen().children());
     }
 
     public static boolean isDialogOpen() {
-        return mc.screen instanceof DialogScreen<?>;
+        return mc.gui.screen() instanceof DialogScreen<?>;
     }
 
     private static boolean pressMatching(List<? extends GuiEventListener> elements) {

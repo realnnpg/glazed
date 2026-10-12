@@ -90,8 +90,8 @@ public class SpawnerOrder extends Module {
     }
 
     private boolean isGreenGlass(net.minecraft.world.item.ItemStack stack) {
-        return stack.getItem() == Items.LIME_STAINED_GLASS_PANE ||
-            stack.getItem() == Items.GREEN_STAINED_GLASS_PANE;
+        return stack.getItem() == Items.STAINED_GLASS_PANE.lime() ||
+            stack.getItem() == Items.STAINED_GLASS_PANE.green();
     }
 
     private int getDropDelayMinutes() {
@@ -147,7 +147,7 @@ public class SpawnerOrder extends Module {
 
     @Override
     public void onDeactivate() {
-        if (mc.screen != null) {
+        if (mc.gui.screen() != null) {
             mc.player.closeContainer();
         }
         mc.player.setXRot(0f);
@@ -308,7 +308,7 @@ public class SpawnerOrder extends Module {
     }
 
     private void handleOpening() {
-        if (mc.screen instanceof ContainerScreen) {
+        if (mc.gui.screen() instanceof ContainerScreen) {
             currentState = State.DROPPING;
             currentSpawnerPageCounter = 0;
             if (notifications.get()) {
@@ -323,7 +323,7 @@ public class SpawnerOrder extends Module {
     }
 
     private void handleDropping() {
-        if (!(mc.screen instanceof ContainerScreen screen)) {
+        if (!(mc.gui.screen() instanceof ContainerScreen screen)) {
             currentState = State.OPENING;
             return;
         }
@@ -393,7 +393,7 @@ public class SpawnerOrder extends Module {
     }
 
     private void handleClosingGui() {
-        if (mc.screen != null) {
+        if (mc.gui.screen() != null) {
             mc.player.closeContainer();
         }
 
@@ -444,7 +444,7 @@ public class SpawnerOrder extends Module {
     }
 
     private void handleOpeningOrder() {
-        if (mc.screen instanceof ContainerScreen) {
+        if (mc.gui.screen() instanceof ContainerScreen) {
             currentState = State.CLICKING_SLOT0;
             if (notifications.get()) {
                 ChatUtils.info("");
@@ -453,7 +453,7 @@ public class SpawnerOrder extends Module {
     }
 
     private void handleClickingSlot0() {
-        if (!(mc.screen instanceof ContainerScreen screen)) {
+        if (!(mc.gui.screen() instanceof ContainerScreen screen)) {
             currentState = State.ORDER_COMMAND;
             return;
         }
@@ -486,7 +486,7 @@ public class SpawnerOrder extends Module {
     }
 
     private void handleDepositingItems() {
-        if (!(mc.screen instanceof ContainerScreen screen)) {
+        if (!(mc.gui.screen() instanceof ContainerScreen screen)) {
             if (waitCounter > 20) {
                 currentState = State.WAITING_CONFIRM_GUI;
             }
@@ -537,7 +537,7 @@ public class SpawnerOrder extends Module {
     }
 
     private void handleWaitingConfirmGui() {
-        if (mc.screen instanceof ContainerScreen screen) {
+        if (mc.gui.screen() instanceof ContainerScreen screen) {
             AbstractContainerMenu handler = screen.getMenu();
 
             if (handler.slots.size() > 15) {
@@ -561,7 +561,7 @@ public class SpawnerOrder extends Module {
     }
 
     private void handleConfirmingSale() {
-        if (!(mc.screen instanceof ContainerScreen screen)) {
+        if (!(mc.gui.screen() instanceof ContainerScreen screen)) {
             currentState = State.CLOSING_ORDER;
             return;
         }
@@ -596,7 +596,7 @@ public class SpawnerOrder extends Module {
     }
 
     private void handleClosingOrder() {
-        if (mc.screen != null) {
+        if (mc.gui.screen() != null) {
             mc.player.closeContainer();
         }
 
@@ -626,7 +626,7 @@ public class SpawnerOrder extends Module {
                 if (notifications.get()) {
                     ChatUtils.info("Cycle completed! Next cycle in " + dropDelayMinutes.get() + " minutes");
                 }
-                if (mc.screen != null) {
+                if (mc.gui.screen() != null) {
                     mc.player.closeContainer();
                     mc.player.closeContainer();
                     if (notifications.get()) {
@@ -638,7 +638,7 @@ public class SpawnerOrder extends Module {
     }
 
     private void handleWaitingCycle() {
-        if (mc.screen != null) {
+        if (mc.gui.screen() != null) {
             mc.player.closeContainer();
             mc.player.closeContainer();
             if (notifications.get()) {

@@ -206,7 +206,7 @@ public class DroppedItemESP extends Module {
 
         if (mode == NotificationMode.Toast || mode == NotificationMode.Both) {
             SystemToast.add(
-                    mc.getToastManager(),
+                    mc.gui.toastManager(),
                     SystemToast.SystemToastId.PERIODIC_NOTIFICATION,
                     Component.literal("Dropped Items ESP"),
                     Component.literal(message)
@@ -262,7 +262,7 @@ public class DroppedItemESP extends Module {
         drawRoundedRect(x - 4, y - 2, width + 8, height + 4, cornerRadius.get(), backgroundColor.get());
         Renderer2D.COLOR.render();
 
-        text.beginBig();
+        text.beginBig(event.graphics);
         text.render(label, x, y, color, true);
         text.end();
 

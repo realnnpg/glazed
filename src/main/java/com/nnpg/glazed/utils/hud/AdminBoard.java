@@ -98,7 +98,7 @@ public final class AdminBoard {
     }
 
     public void drag(Setting<Integer> hudX, Setting<Integer> hudY, Setting<Integer> size) {
-        if (mc.getWindow() == null || !(mc.screen instanceof ChatScreen)) {
+        if (mc.getWindow() == null || !(mc.gui.screen() instanceof ChatScreen)) {
             dragging = false;
             return;
         }

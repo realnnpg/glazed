@@ -68,7 +68,7 @@ public class WSlateModule extends WPressable implements GlazedSlateWidget {
     @Override
     protected void onPressed(int button) {
         if (button == MOUSE_BUTTON_LEFT) module.toggle();
-        else if (button == MOUSE_BUTTON_RIGHT) mc.setScreen(theme.moduleScreen(module));
+        else if (button == MOUSE_BUTTON_RIGHT) mc.gui.setScreen(theme.moduleScreen(module));
     }
 
     @Override

@@ -624,7 +624,7 @@ public class RTPer extends Module {
         WLabel current = table.add(theme.label(targetBiome.get().getDisplayName())).expandX().widget();
         WButton open = table.add(theme.button("Select")).widget();
         open.action = () -> {
-            if (rtpMode.get() == RTPMode.BIOME) mc.setScreen(new BiomePickerScreen(theme, current));
+            if (rtpMode.get() == RTPMode.BIOME) mc.gui.setScreen(new BiomePickerScreen(theme, current));
         };
         table.row();
 
@@ -666,7 +666,7 @@ public class RTPer extends Module {
                 select.action = () -> {
                     targetBiome.set(biome);
                     if (currentLabel != null) currentLabel.set(biome.getDisplayName());
-                    mc.setScreen(null);
+                    mc.gui.setScreen(null);
                 };
                 listTable.row();
             }

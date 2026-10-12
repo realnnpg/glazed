@@ -132,7 +132,7 @@ public class RegionMap extends Module {
         try {
             Vec3 playerPos = new Vec3(mc.player.getX(), mc.player.getY(), mc.player.getZ());
             MapRenderContext ctx = new MapRenderContext(
-                    mapPosX.get(), mapPosY.get(),
+                    event.graphics, mapPosX.get(), mapPosY.get(),
                     cellDimension.get(), mapTransparency.get()
             );
 
@@ -189,7 +189,7 @@ public class RegionMap extends Module {
             TextRenderer textRenderer = TextRenderer.get();
             if (textRenderer == null) return;
 
-            textRenderer.begin(1.0, false, true);
+            textRenderer.begin(ctx.graphics, 1.0, false, true);
 
             String coordsText = String.format("Position: X: %d, Z: %d", (int) pos.x, (int) pos.z);
             textRenderer.render(coordsText, ctx.mapX, infoY, Color.WHITE, false);
@@ -229,7 +229,7 @@ public class RegionMap extends Module {
             TextRenderer textRenderer = TextRenderer.get();
             if (textRenderer == null) return;
 
-            textRenderer.begin(1.0, false, true);
+            textRenderer.begin(ctx.graphics, 1.0, false, true);
             for (int i = 0; i < continentNames.length; i++) {
                 int legendY = legendStartY + i * 16 + 3;
                 textRenderer.render(continentNames[i], ctx.mapX + 18, legendY, Color.WHITE, false);
@@ -247,7 +247,7 @@ public class RegionMap extends Module {
             TextRenderer textRenderer = TextRenderer.get();
             if (textRenderer == null) return startY;
 
-            textRenderer.begin(1.0, false, true);
+            textRenderer.begin(ctx.graphics, 1.0, false, true);
 
             String coordsText = String.format("Position: X: %d, Z: %d", (int) pos.x, (int) pos.z);
             textRenderer.render(coordsText, ctx.mapX, startY, Color.WHITE, false);
@@ -284,7 +284,7 @@ public class RegionMap extends Module {
             TextRenderer textRenderer = TextRenderer.get();
             if (textRenderer == null) return startY + categories.length * 16;
 
-            textRenderer.begin(1.0, false, true);
+            textRenderer.begin(ctx.graphics, 1.0, false, true);
             for (int i = 0; i < categories.length; i++) {
                 int legendY = startY + i * 16 + 3;
                 textRenderer.render(categories[i].label, ctx.mapX + 18, legendY, Color.WHITE, false);
@@ -509,11 +509,13 @@ public class RegionMap extends Module {
     }
 
     private class MapRenderContext {
+        final net.minecraft.client.gui.GuiGraphicsExtractor graphics;
         final int mapX, mapY;
         final int cellSize;
         final double transparency;
 
-        MapRenderContext(int x, int y, int cellSize, double transparency) {
+        MapRenderContext(net.minecraft.client.gui.GuiGraphicsExtractor graphics, int x, int y, int cellSize, double transparency) {
+            this.graphics = graphics;
             this.mapX = x;
             this.mapY = y;
             this.cellSize = Math.max(1, cellSize);
@@ -622,7 +624,7 @@ public class RegionMap extends Module {
                 TextRenderer textRenderer = TextRenderer.get();
                 if (textRenderer == null) return;
 
-                textRenderer.begin(textScale, false, true);
+                textRenderer.begin(ctx.graphics, textScale, false, true);
 
                 int rows = dataManager.getGridRows();
                 int cols = dataManager.getGridCols();

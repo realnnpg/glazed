@@ -188,7 +188,7 @@ public class AutoLeave extends Module {
         trigger = found;
 
         if (notifications.get()) info("(highlight)%s(default) is here. Leaving.", trigger);
-        if (toast.get()) mc.getToastManager().addToast(new MeteorToast.Builder(title).text("Player detected - leaving").icon(Items.PLAYER_HEAD).build());
+        if (toast.get()) mc.gui.toastManager().addToast(new MeteorToast.Builder(title).text("Player detected - leaving").icon(Items.PLAYER_HEAD).build());
 
         fuse = reactionDelay.get();
         if (fuse > 0 && reactionJitter.get() > 0) fuse += random.nextInt(reactionJitter.get() + 1);
