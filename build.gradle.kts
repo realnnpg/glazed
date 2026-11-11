@@ -1,3 +1,4 @@
+
 plugins {
     id("fabric-loom") version "1.15.5"
 }
@@ -25,11 +26,9 @@ repositories {
         url = uri("https://maven.bawnorton.com/releases")
     }
     maven {
-        // Hosts nether-pathfinder, which Baritone's elytra process loads on startup.
         name = "babbaj"
         url = uri("https://babbaj.github.io/maven/")
     }
-    // loom can only nest a real module, not a loose file, so the bundled jar lives here
     flatDir {
         dirs("libs")
     }
@@ -43,21 +42,7 @@ dependencies {
     modImplementation("meteordevelopment:baritone:${properties["baritone_version"] as String}-SNAPSHOT")
     implementation("com.google.code.gson:gson:2.10.1")
     include(implementation("com.github.LabyStudio:java-spotify-api:${properties["spotify_api_version"] as String}")!!)
-    // ExploitPreventer by NikOverflow (MIT), shipped inside our jar so it always loads.
-    // not added to the dev runtime because it hard-depends on the full fabric-api and we only
-    // pull the few modules IAS needs
-    include("com.nikoverflow:exploitpreventer:1.1.0")
-    // Baritone touches NetherPathfinder during BaritoneAPI's static init, so the dev client
-    // crashes on startup without it. Runtime-only: it is not bundled into the released jar.
     runtimeOnly("dev.babbaj:nether-pathfinder:1.4.1")
-    // ExploitPreventer hard-depends on the whole fabric-api, so dev needs all of it, not just the
-    // couple of modules IAS wanted
-    modRuntimeOnly("net.fabricmc.fabric-api:fabric-api:${properties["fabric_api_version"] as String}")
-    modRuntimeOnly("com.nikoverflow:exploitpreventer:1.1.0")
-    // exploitpreventer carries these two inside itself. fabric unpacks nested jars in a real
-    // install but not for a dev mod, so without these it dies on its own IAPI class
-    runtimeOnly("com.nikoverflow:ExploitPreventer-API:1.0.0")
-    runtimeOnly("dev.lukebemish:opensesame-core:0.8.1")
     include(implementation(annotationProcessor("com.github.bawnorton.mixinsquared:mixinsquared-fabric:0.3.7-beta.1")!!)!!)
 }
 
