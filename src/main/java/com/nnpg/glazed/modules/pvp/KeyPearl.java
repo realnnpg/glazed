@@ -49,6 +49,7 @@ public class KeyPearl extends Module {
     private int delayCounter = 0;
     private int switchCounter = 0;
     private boolean throwing = false;
+    private boolean thrown = false;
     private boolean keyPressedLastTick = false;
 
     public KeyPearl() {
@@ -73,9 +74,12 @@ public class KeyPearl extends Module {
                 return;
             }
 
-            if (mc.player.getMainHandItem().getItem() == Items.ENDER_PEARL) {
-                mc.gameMode.useItem(mc.player, InteractionHand.MAIN_HAND);
-                mc.player.swing(InteractionHand.MAIN_HAND);
+            if (!thrown) {
+                thrown = true;
+                if (mc.player.getMainHandItem().getItem() == Items.ENDER_PEARL) {
+                    mc.gameMode.useItem(mc.player, InteractionHand.MAIN_HAND);
+                    mc.player.swing(InteractionHand.MAIN_HAND);
+                }
             }
 
             if (switchBack.get()) {
@@ -93,7 +97,7 @@ public class KeyPearl extends Module {
     }
 
     private void throwPearl() {
-        if (mc.player == null) return;
+        if (mc.player == null || throwing) return;
 
         prevSlot = mc.player.getInventory().getSelectedSlot();
 
@@ -101,6 +105,7 @@ public class KeyPearl extends Module {
             if (mc.player.getInventory().getItem(i).getItem() == Items.ENDER_PEARL) {
                 mc.player.getInventory().setSelectedSlot(i);
                 throwing = true;
+                thrown = false;
                 delayCounter = 0;
                 switchCounter = 0;
                 break;
@@ -110,6 +115,7 @@ public class KeyPearl extends Module {
 
     private void reset() {
         throwing = false;
+        thrown = false;
         delayCounter = 0;
         switchCounter = 0;
         prevSlot = -1;
