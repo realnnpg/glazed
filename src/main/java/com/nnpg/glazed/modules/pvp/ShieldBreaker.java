@@ -48,6 +48,7 @@ public class ShieldBreaker extends Module {
         .defaultValue(0)
         .range(0, 40)
         .sliderRange(1, 20)
+        .visible(autoBreak::get)
         .build()
     );
     
@@ -57,6 +58,7 @@ public class ShieldBreaker extends Module {
         .defaultValue(1)
         .range(0, 40)
         .sliderRange(1, 20)
+        .visible(() -> this.killSwitch.get())
         .build()
     );
 
@@ -75,6 +77,7 @@ public class ShieldBreaker extends Module {
         .defaultValue(1)
         .range(0, 20)
         .sliderRange(1, 10)
+        .visible(() -> !autoBreak.get())
         .build()
     );
 
