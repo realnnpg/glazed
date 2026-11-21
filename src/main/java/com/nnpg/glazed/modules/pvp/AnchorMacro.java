@@ -170,6 +170,8 @@ public class AnchorMacro extends Module {
     private int glowstoneClock;
     private int explodeClock;
     private BlockPos lastAnchor;
+    private boolean pendingSwitchBack;
+    private int switchBackClock;
 
     public AnchorMacro() {
         super(GlazedAddon.pvp, "anchor-macro", "Charges and blows up respawn anchors while you hold use.");
@@ -182,6 +184,7 @@ public class AnchorMacro extends Module {
 
     @Override
     public void onDeactivate() {
+        pendingSwitchBack = false;
         resetClocks();
         ownedAnchors.clear();
     }
@@ -196,6 +199,13 @@ public class AnchorMacro extends Module {
     @EventHandler
     private void onTick(TickEvent.Pre event) {
         if (mc.player == null || mc.level == null || mc.gui.screen() != null) return;
+
+        if (pendingSwitchBack) {
+            if (switchBackClock++ < switchDelay.get()) return;
+            pendingSwitchBack = false;
+            swapTo(Items.RESPAWN_ANCHOR);
+            return;
+        }
 
         if (!isUseHeld()) {
             resetClocks();
@@ -271,7 +281,10 @@ public class AnchorMacro extends Module {
 
         rightClick();
         ownedAnchors.remove(pos);
-        if (switchBack.get()) swapTo(Items.RESPAWN_ANCHOR);
+        if (switchBack.get()) {
+            pendingSwitchBack = true;
+            switchBackClock = 0;
+        }
     }
 
     @EventHandler
