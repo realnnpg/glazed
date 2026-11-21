@@ -183,7 +183,7 @@ public class AutoInvTotem extends Module {
             }
         }
 
-        if (invAutoOpened && invCloseTicks > 0) {
+        if (invAutoOpened && invCloseTicks > 0 && !(invCloseTicks == 1 && delayTicks > 0)) {
             invCloseTicks--;
             if (invCloseTicks == 0 && mc.gui.screen() instanceof InventoryScreen) {
                 mc.gui.setScreen(null);
