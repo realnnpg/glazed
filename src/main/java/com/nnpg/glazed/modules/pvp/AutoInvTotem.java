@@ -127,7 +127,7 @@ public class AutoInvTotem extends Module {
     private void onPacketReceive(PacketEvent.Receive event) {
         if (event.packet instanceof ClientboundEntityEventPacket packet) {
             if (packet.getEventId() == 35 && mc.player != null && packet.getEntity(mc.level) == mc.player) {
-                if (openInv.get() && mc.gui.screen() == null) {
+                if (openInv.get() && !(mc.gui.screen() instanceof InventoryScreen)) {
                     shouldOpenInv = true;
                     invOpenTicks = invOpenDelay.get();
                     if (!disableLogs.get()) {
@@ -169,9 +169,10 @@ public class AutoInvTotem extends Module {
     }
 
     private void handleAutoInventory() {
-        if (shouldOpenInv && invOpenTicks > 0) {
-            invOpenTicks--;
-            if (invOpenTicks == 0 && mc.gui.screen() == null) {
+        if (shouldOpenInv) {
+            if (invOpenTicks > 0) invOpenTicks--;
+            if (mc.gui.screen() instanceof InventoryScreen) shouldOpenInv = false;
+            else if (invOpenTicks == 0 && mc.gui.screen() == null) {
                 mc.gui.setScreen(new InventoryScreen(mc.player));
                 invAutoOpened = true;
                 invCloseTicks = invCloseDelay.get();
