@@ -244,7 +244,7 @@ public class ShieldBreaker extends Module {
     private void handleAxeSwitch() {
         tickCounter++;
         
-        if (tickCounter >= axeSwitchDelay.get()) {
+        if (tickCounter > axeSwitchDelay.get()) {
             if (!shieldBroken) {
                 long currentTime = System.currentTimeMillis();
                 if (currentTime - lastBreakAttempt > 150) {
@@ -302,7 +302,7 @@ public class ShieldBreaker extends Module {
     private void handleWeaponSwitch() {
         tickCounter++;
         
-        if (tickCounter >= weaponSwitchDelay.get()) {
+        if (tickCounter > weaponSwitchDelay.get()) {
             state = ShieldBreakerState.KILLING;
             tickCounter = 0;
         }
@@ -311,7 +311,7 @@ public class ShieldBreaker extends Module {
     private void handleKillAttack() {
         tickCounter++;
         
-        if (tickCounter >= killDelay.get()) {
+        if (tickCounter > killDelay.get()) {
             if (killSwitch.get()) {
                 if (targetPlayer != null && !targetPlayer.isRemoved()) {
                     mc.gameMode.attack(mc.player, targetPlayer);
