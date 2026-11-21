@@ -36,7 +36,7 @@ public class ShieldBreaker extends Module {
         .name("weapon-slot")
         .description("The hotbar slot to switch back to after breaking shield (1-9)")
         .defaultValue(1)
-        .range(0, 9)
+        .range(1, 9)
         .sliderRange(1, 9)
         .visible(() -> !returnToPrevSlot.get())
         .build()
