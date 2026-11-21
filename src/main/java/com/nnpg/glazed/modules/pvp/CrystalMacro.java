@@ -124,11 +124,11 @@ public class CrystalMacro extends Module {
 
     private final Random random = new Random();
 
-    private int placeDelayCounter;
-    private int breakDelayCounter;
+    private double placeTimer;
+    private double breakTimer;
     private int switchDelayCounter;
     private int cooldownCounter;
-    private int nextBreakDelay;
+    private double nextBreakDelay;
 
     private boolean placingObsidian;
     private BlockHitResult pendingObsidian;
@@ -151,8 +151,8 @@ public class CrystalMacro extends Module {
     }
 
     private void reset() {
-        placeDelayCounter = 0;
-        breakDelayCounter = 0;
+        placeTimer = 0;
+        breakTimer = 0;
         switchDelayCounter = 0;
         cooldownCounter = 0;
         placingObsidian = false;
@@ -172,7 +172,7 @@ public class CrystalMacro extends Module {
         }
 
         double cps = min + (max - min) * random.nextDouble();
-        nextBreakDelay = Math.max(1, (int) (20.0 / cps));
+        nextBreakDelay = 20.0 / cps;
     }
 
     @EventHandler
@@ -201,14 +201,10 @@ public class CrystalMacro extends Module {
         boolean useHeld = mc.options.keyUse.isDown();
         if (!useHeld) {
             useWasHeld = false;
-            cooldownCounter = 0;
             return;
         }
 
-        if (!useWasHeld) {
-            useWasHeld = true;
-            cooldownCounter = 0;
-        }
+        useWasHeld = true;
 
         if (placingObsidian && switchDelayCounter <= 0 && pendingObsidian != null) {
             finishObsidian();
@@ -223,15 +219,15 @@ public class CrystalMacro extends Module {
     }
 
     private void tickCounters() {
-        if (placeDelayCounter > 0) placeDelayCounter--;
-        if (breakDelayCounter > 0) breakDelayCounter--;
+        if (placeTimer > 0) placeTimer--;
+        if (breakTimer > 0) breakTimer--;
         if (switchDelayCounter > 0) switchDelayCounter--;
         if (cooldownCounter > 0) cooldownCounter--;
     }
 
     private void onBlock(BlockHitResult blockHit) {
         if (blockHit.getType() != HitResult.Type.BLOCK) return;
-        if (placeDelayCounter > 0 || placingObsidian) return;
+        if (placeTimer > 0 || placingObsidian) return;
 
         BlockPos pos = blockHit.getBlockPos();
         boolean solidEnough = BlockUtil.isBlockAtPosition(pos, Blocks.OBSIDIAN) || BlockUtil.isBlockAtPosition(pos, Blocks.BEDROCK);
@@ -245,7 +241,7 @@ public class CrystalMacro extends Module {
         if (lootNearby(pos.above())) return;
 
         BlockUtil.interactWithBlock(blockHit, true);
-        placeDelayCounter = placeDelay.get().intValue();
+        placeTimer += placeDelay.get() + 1;
     }
 
     private void startObsidian(BlockHitResult blockHit) {
@@ -258,7 +254,7 @@ public class CrystalMacro extends Module {
 
         placingObsidian = true;
         pendingObsidian = blockHit;
-        switchDelayCounter = obsidianSwitchDelay.get().intValue();
+        switchDelayCounter = (int) Math.round(obsidianSwitchDelay.get()) + 1;
     }
 
     private void finishObsidian() {
@@ -275,7 +271,7 @@ public class CrystalMacro extends Module {
         BlockPos pos = pendingObsidian.getBlockPos();
         if (canPlaceCrystal(pos) && !lootNearby(pos.above())) {
             BlockUtil.interactWithBlock(pendingObsidian, true);
-            placeDelayCounter = placeDelay.get().intValue();
+            placeTimer += placeDelay.get() + 1;
         }
 
         cooldownCounter = (int) (obsidianCooldown.get() * 20);
@@ -284,7 +280,7 @@ public class CrystalMacro extends Module {
     }
 
     private void onEntity(EntityHitResult entityHit) {
-        if (breakDelayCounter > 0 || placingObsidian) return;
+        if (breakTimer > 0 || placingObsidian) return;
         if (mc.player == null || mc.gameMode == null) return;
 
         Entity entity = entityHit.getEntity();
@@ -295,7 +291,7 @@ public class CrystalMacro extends Module {
         mc.gameMode.attack(mc.player, entity);
         mc.player.swing(InteractionHand.MAIN_HAND);
 
-        breakDelayCounter = nextBreakDelay;
+        breakTimer += nextBreakDelay;
         rollBreakDelay();
     }
 

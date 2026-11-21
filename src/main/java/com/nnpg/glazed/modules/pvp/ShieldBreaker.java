@@ -36,7 +36,7 @@ public class ShieldBreaker extends Module {
         .name("weapon-slot")
         .description("The hotbar slot to switch back to after breaking shield (1-9)")
         .defaultValue(1)
-        .range(0, 9)
+        .range(1, 9)
         .sliderRange(1, 9)
         .visible(() -> !returnToPrevSlot.get())
         .build()
@@ -48,6 +48,7 @@ public class ShieldBreaker extends Module {
         .defaultValue(0)
         .range(0, 40)
         .sliderRange(1, 20)
+        .visible(autoBreak::get)
         .build()
     );
     
@@ -57,6 +58,7 @@ public class ShieldBreaker extends Module {
         .defaultValue(1)
         .range(0, 40)
         .sliderRange(1, 20)
+        .visible(() -> this.killSwitch.get())
         .build()
     );
 
@@ -75,6 +77,7 @@ public class ShieldBreaker extends Module {
         .defaultValue(1)
         .range(0, 20)
         .sliderRange(1, 10)
+        .visible(() -> !autoBreak.get())
         .build()
     );
 
@@ -164,20 +167,23 @@ public class ShieldBreaker extends Module {
 
         if (mc.player.isUsingItem()) return;
 
-        if (autoBreak.get()) {
-                if (cooldownTicks > 0) {
-                    cooldownTicks--;
-                    return;
-                }
-            switch (state) {
-                case IDLE -> checkForShieldUser();
-                case SWITCHING_AXE -> handleAxeSwitch();
-                case BREAKING -> handleShieldBreak();
-                case SWITCHING_BACK -> handleWeaponSwitch();
-                case KILLING -> handleKillAttack();
-            }
-        } else {
-            checkForShieldUser();
+        if (state == ShieldBreakerState.IDLE && cooldownTicks > 0) {
+            cooldownTicks--;
+            return;
+        }
+
+        if (state != ShieldBreakerState.IDLE && !targetValid()) {
+            swapBack();
+            resetState();
+            return;
+        }
+
+        switch (state) {
+            case IDLE -> checkForShieldUser();
+            case SWITCHING_AXE -> handleAxeSwitch();
+            case BREAKING -> handleShieldBreak();
+            case SWITCHING_BACK -> handleWeaponSwitch();
+            case KILLING -> handleKillAttack();
         }
     }
 
@@ -187,145 +193,86 @@ public class ShieldBreaker extends Module {
         }
 
         EntityHitResult entityHit = (EntityHitResult) mc.hitResult;
-        
+
         if (onlyPlayers.get() && !(entityHit.getEntity() instanceof Player)) {
             return;
         }
-        
-        if (entityHit.getEntity() instanceof Player player) {
-            if (mc.player.distanceTo(player) > range.get()) {
-                return;
-            }
-            
-            if (isUsingShield(player)) {
-                targetPlayer = player;
-                boolean isAttacking = mc.options.keyAttack.isDown();
 
-                if (!autoBreak.get() && isAttacking) {
-                    originalSlot = com.nnpg.glazed.utils.InventoryUtils.getSelectedSlot(mc.player.getInventory());
+        if (!(entityHit.getEntity() instanceof Player player)) return;
+        if (mc.player.distanceTo(player) > range.get()) return;
+        if (!isUsingShield(player)) return;
+        if (!autoBreak.get() && !mc.options.keyAttack.isDown()) return;
 
-                    FindItemResult axeResult = InvUtils.findInHotbar(itemStack -> itemStack.getItem() instanceof AxeItem);
-                    
-                    if (!axeResult.found()) {
-                        if (chatInfo.get()) error("No axe found in hotbar!");
-                        return;
-                    }
+        FindItemResult axeResult = InvUtils.findInHotbar(itemStack -> itemStack.getItem() instanceof AxeItem);
 
-                    if (chatInfo.get()) info("Shield detected! Breaking with axe");
-                    
-                    InvUtils.swap(axeResult.slot(), false);
-                    mc.gameMode.attack(mc.player, player);
-                    mc.player.swing(InteractionHand.MAIN_HAND);
-                    
-                    tickCounter = 0;
-                    state = ShieldBreakerState.BREAKING;
-
-                } else if (autoBreak.get()) {
-                    if (originalSlot == -1) {
-                        originalSlot = com.nnpg.glazed.utils.InventoryUtils.getSelectedSlot(mc.player.getInventory());
-                    }
-                    
-                    FindItemResult axeResult = InvUtils.findInHotbar(itemStack -> itemStack.getItem() instanceof AxeItem);
-                    
-                    if (!axeResult.found()) {
-                        if (chatInfo.get()) error("No axe found in hotbar!");
-                        return;
-                    }
-
-                    if (chatInfo.get()) info("Shield detected! Breaking with axe");
-                    InvUtils.swap(axeResult.slot(), false);
-                    state = ShieldBreakerState.SWITCHING_AXE;
-                    tickCounter = 0;
-                }
-            }
+        if (!axeResult.found()) {
+            if (chatInfo.get()) error("No axe found in hotbar!");
+            return;
         }
+
+        targetPlayer = player;
+        originalSlot = com.nnpg.glazed.utils.InventoryUtils.getSelectedSlot(mc.player.getInventory());
+
+        if (chatInfo.get()) info("Shield detected! Breaking with axe");
+        InvUtils.swap(axeResult.slot(), false);
+        state = ShieldBreakerState.SWITCHING_AXE;
+        tickCounter = 0;
     }
 
     private void handleAxeSwitch() {
-        tickCounter++;
-        
-        if (tickCounter >= axeSwitchDelay.get()) {
-            if (!shieldBroken) {
-                long currentTime = System.currentTimeMillis();
-                if (currentTime - lastBreakAttempt > 150) {
-                    mc.gameMode.attack(mc.player, targetPlayer);
-                    mc.player.swing(InteractionHand.MAIN_HAND);
-                    lastBreakAttempt = currentTime;
-                    shieldBroken = true;
-                    
-                    if (chatInfo.get()) info("Shield broken! Switching to weapon...");
-                }
-            }
-            
-            state = ShieldBreakerState.BREAKING;
-            tickCounter = 0;
-        }
+        if (++tickCounter <= axeSwitchDelay.get()) return;
+
+        mc.gameMode.attack(mc.player, targetPlayer);
+        mc.player.swing(InteractionHand.MAIN_HAND);
+        shieldBroken = true;
+        if (chatInfo.get()) info("Shield broken! Switching to weapon...");
+
+        state = ShieldBreakerState.BREAKING;
+        tickCounter = 0;
     }
 
     private void handleShieldBreak() {
-        tickCounter++;
-        
-        if (shieldBroken) {
-            if (!autoBreak.get()) {
-                if (originalSlot != -1) {
-                    InvUtils.swap(originalSlot, false);
-                    
-                    if (targetPlayer != null && !targetPlayer.isRemoved() && mc.player.distanceTo(targetPlayer) <= range.get()) {
-                        mc.gameMode.attack(mc.player, targetPlayer);
-                        mc.player.swing(InteractionHand.MAIN_HAND);
-                        if (chatInfo.get()) info("Attacking with original weapon!");
-                    }
-                    resetState();
-                    return;
-                }
-            } else {
-                if (returnToPrevSlot.get()) {
-                    if (originalSlot != -1) {
-                        InvUtils.swap(originalSlot, false);
-                    }
-                } else {
-                    int weaponSlotIndex = weaponSlot.get() - 1;
-                    InvUtils.swap(weaponSlotIndex, false);
-                }
-                state = ShieldBreakerState.SWITCHING_BACK;
-                tickCounter = 0;
-            }
-        } else {
-            if (tickCounter >= 3) {
-                if (chatInfo.get()) error("Shield break failed, retrying...");
-                state = ShieldBreakerState.IDLE;
-                tickCounter = 0;
-            }
-        }
+        int wait = autoBreak.get() ? attackDelay.get() : manualShieldBreakDelay.get();
+        if (++tickCounter <= wait) return;
+
+        swapBack();
+        state = ShieldBreakerState.SWITCHING_BACK;
+        tickCounter = 0;
     }
 
     private void handleWeaponSwitch() {
-        tickCounter++;
-        
-        if (tickCounter >= weaponSwitchDelay.get()) {
-            state = ShieldBreakerState.KILLING;
-            tickCounter = 0;
-        }
+        if (++tickCounter <= weaponSwitchDelay.get()) return;
+
+        state = ShieldBreakerState.KILLING;
+        tickCounter = 0;
     }
 
     private void handleKillAttack() {
-        tickCounter++;
-        
-        if (tickCounter >= killDelay.get()) {
-            if (killSwitch.get()) {
-                if (targetPlayer != null && !targetPlayer.isRemoved()) {
-                    mc.gameMode.attack(mc.player, targetPlayer);
-                    mc.player.swing(InteractionHand.MAIN_HAND);
-                    
-                    if (chatInfo.get()) info("Kill attack executed!");
-                }
-            } else if (chatInfo.get()) {
-                info("Shield broken - Kill switch disabled");
-            }
-            
-            resetState();
-            cooldownTicks = cycleCooldown.get();
+        if (++tickCounter <= killDelay.get()) return;
+
+        if (killSwitch.get()) {
+            mc.gameMode.attack(mc.player, targetPlayer);
+            mc.player.swing(InteractionHand.MAIN_HAND);
+            if (chatInfo.get()) info("Kill attack executed!");
+        } else if (chatInfo.get()) {
+            info("Shield broken - Kill switch disabled");
         }
+
+        resetState();
+        cooldownTicks = cycleCooldown.get();
+    }
+
+    private void swapBack() {
+        if (returnToPrevSlot.get()) {
+            if (originalSlot != -1) InvUtils.swap(originalSlot, false);
+        } else {
+            InvUtils.swap(weaponSlot.get() - 1, false);
+        }
+    }
+
+    private boolean targetValid() {
+        return targetPlayer != null && !targetPlayer.isRemoved() && targetPlayer.isAlive()
+            && mc.player.distanceTo(targetPlayer) <= range.get();
     }
 
     private boolean isUsingShield(Player player) {

@@ -169,6 +169,9 @@ public class AnchorMacro extends Module {
     private int switchClock;
     private int glowstoneClock;
     private int explodeClock;
+    private BlockPos lastAnchor;
+    private boolean pendingSwitchBack;
+    private int switchBackClock;
 
     public AnchorMacro() {
         super(GlazedAddon.pvp, "anchor-macro", "Charges and blows up respawn anchors while you hold use.");
@@ -181,11 +184,13 @@ public class AnchorMacro extends Module {
 
     @Override
     public void onDeactivate() {
+        pendingSwitchBack = false;
         resetClocks();
         ownedAnchors.clear();
     }
 
     private void resetClocks() {
+        lastAnchor = null;
         switchClock = 0;
         glowstoneClock = 0;
         explodeClock = 0;
@@ -195,19 +200,30 @@ public class AnchorMacro extends Module {
     private void onTick(TickEvent.Pre event) {
         if (mc.player == null || mc.level == null || mc.gui.screen() != null) return;
 
+        if (pendingSwitchBack) {
+            if (switchBackClock++ < switchDelay.get()) return;
+            pendingSwitchBack = false;
+            swapTo(Items.RESPAWN_ANCHOR);
+            return;
+        }
+
         if (!isUseHeld()) {
             resetClocks();
             return;
         }
 
-        if (!whileUse.get() && (mc.player.isUsingItem() || isGoodTool(mc.player.getOffhandItem()))) return;
-        if (lootProtect.get() && (bodyNearby() || valuablesNearby())) return;
+        if (!whileUse.get() && (mc.player.isUsingItem() || isGoodTool(mc.player.getOffhandItem()))) { resetClocks(); return; }
+        if (lootProtect.get() && (bodyNearby() || valuablesNearby())) { resetClocks(); return; }
 
-        if (!(mc.hitResult instanceof BlockHitResult hit)) return;
+        if (!(mc.hitResult instanceof BlockHitResult hit)) { resetClocks(); return; }
 
         BlockPos pos = hit.getBlockPos();
-        if (!BlockUtil.isBlockAtPosition(pos, Blocks.RESPAWN_ANCHOR)) return;
-        if (onlyOwn.get() && !ownedAnchors.contains(pos)) return;
+        if (!BlockUtil.isBlockAtPosition(pos, Blocks.RESPAWN_ANCHOR)) { resetClocks(); return; }
+        if (onlyOwn.get() && !ownedAnchors.contains(pos)) { resetClocks(); return; }
+        if (!pos.equals(lastAnchor)) {
+            resetClocks();
+            lastAnchor = pos;
+        }
 
         mc.options.keyUse.setDown(false);
 
@@ -229,10 +245,8 @@ public class AnchorMacro extends Module {
                 switchClock++;
                 return;
             }
-            if (roll() <= switchChance.get()) {
-                switchClock = 0;
-                swapTo(Items.GLOWSTONE);
-            }
+            switchClock = 0;
+            if (roll() <= switchChance.get()) swapTo(Items.GLOWSTONE);
             return;
         }
 
@@ -240,10 +254,8 @@ public class AnchorMacro extends Module {
             glowstoneClock++;
             return;
         }
-        if (roll() <= glowstoneChance.get()) {
-            glowstoneClock = 0;
-            rightClick();
-        }
+        glowstoneClock = 0;
+        if (roll() <= glowstoneChance.get()) rightClick();
     }
 
     private void detonate(BlockPos pos) {
@@ -254,10 +266,8 @@ public class AnchorMacro extends Module {
                 switchClock++;
                 return;
             }
-            if (roll() <= switchChance.get()) {
-                switchClock = 0;
-                VersionUtil.setSelectedSlot(mc.player, slot);
-            }
+            switchClock = 0;
+            if (roll() <= switchChance.get()) VersionUtil.setSelectedSlot(mc.player, slot);
             return;
         }
 
@@ -265,14 +275,16 @@ public class AnchorMacro extends Module {
             explodeClock++;
             return;
         }
-        if (roll() > explodeChance.get()) return;
-
         explodeClock = 0;
+        if (roll() > explodeChance.get()) return;
         if (onlyCharge.get()) return;
 
         rightClick();
         ownedAnchors.remove(pos);
-        if (switchBack.get()) swapTo(Items.RESPAWN_ANCHOR);
+        if (switchBack.get()) {
+            pendingSwitchBack = true;
+            switchBackClock = 0;
+        }
     }
 
     @EventHandler
