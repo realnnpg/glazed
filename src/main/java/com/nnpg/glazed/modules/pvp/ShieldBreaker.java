@@ -279,6 +279,7 @@ public class ShieldBreaker extends Module {
                     return;
                 }
             } else {
+                if (tickCounter <= attackDelay.get()) return;
                 if (returnToPrevSlot.get()) {
                     if (originalSlot != -1) {
                         InvUtils.swap(originalSlot, false);
